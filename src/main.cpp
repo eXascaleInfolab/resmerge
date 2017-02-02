@@ -11,20 +11,8 @@
 #include <cstdio>
 #include <string>
 
-#ifdef __has_include
-	#if __has_include(<filesystem>)
-		#include <filesystem>
-		namespace fs = std::filesystem;
-	#elif __has_include(<experimental/filesystem>)
-		#include <experimental/filesystem>
-		namespace fs = std::experimental::filesystem;
-	#endif // __has_include
-	//#include <system_error>
-#else // Platform-dependent file IO
-	#error "STL filesystem is not available. The native alternative is not implemented."
-#endif // __has_include
-
 #include "cmdline.h"  // Arguments parsing
+#define INCLUDE_STL_FS
 #include "fileio.h"
 
 
@@ -47,13 +35,14 @@ int main(int argc, char **argv)
 
 	// Get output file name
 	string  outpname = args_info.output_arg;
-	if(!args_info.output_given && args_info.inputs_num == 1
-	&& is_directory(args_info.inputs[0])
-	// Note: "../." like templates are not verified and result in the output to the ..cnl file
-	&& args_info.inputs[0] != "." && args_info.inputs[0] != "..") {
+	{
+		string  name = string(args_info.inputs[0]);  // Name of the first entry
 		// Update default output filename in case single dir is specified
-		outpname = args_info.inputs[0];
-		outpname += ".cnl";
+		if(!args_info.output_given && args_info.inputs_num == 1
+		&& is_directory(name)
+		// Note: "../." like templates are not verified and result in the output to the ..cnl file
+		&& name != "." && name != "..")
+			outpname = name + ".cnl";
 	}
 
 	// Check whether the output already exists
@@ -64,11 +53,15 @@ int main(int argc, char **argv)
 			return 1;
 	}
 
-//	// Open input files (clusterings on multiple resolution levels)
-//	auto files = openFiles(args_info.inputs, args_info.inputs_num);
-//	if(files.empty())
-//		return 1;
-//
+	// Open input files (clusterings on multiple resolution levels)
+	vector<const char*>  names;
+	names.reserve(args_info.inputs_num);
+	for(size_t i = 0; i < args_info.inputs_num; ++i)
+		names.push_back(args_info.inputs[i]);
+	auto files = openFiles(names);
+	if(files.empty())
+		return 1;
+
 //	auto clusters = loadClusters(files, args_info.fixed-nodes, args_info.min_size_arg, args_info.max_size_arg);
 //	outputClusters(clusters)
 

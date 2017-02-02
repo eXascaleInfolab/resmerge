@@ -13,6 +13,7 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
+					<Add option="-DDEBUG" />
 				</Compiler>
 			</Target>
 			<Target title="Release">
@@ -32,6 +33,7 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 			<Add directory="autogen" />
+			<Add directory="include" />
 		</Compiler>
 		<Linker>
 			<Add library="stdc++fs" />
@@ -41,8 +43,18 @@
 		</Unit>
 		<Unit filename="autogen/cmdline.h" />
 		<Unit filename="include/fileio.h" />
+		<Unit filename="src/fileio.cpp" />
 		<Unit filename="src/main.cpp" />
 		<Extensions>
+			<DoxyBlocks>
+				<comment_style block="1" line="1" />
+				<doxyfile_project />
+				<doxyfile_build />
+				<doxyfile_warnings />
+				<doxyfile_output />
+				<doxyfile_dot />
+				<general />
+			</DoxyBlocks>
 			<code_completion />
 			<envvars />
 			<lib_finder disable_auto="1" />

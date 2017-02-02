@@ -1,5 +1,9 @@
 //! \brief File IO utils.
 //!
+//!	Interface macro
+//! INCLUDE_STL_FS  - include STL filesystem library under fs namespace. This macros is
+//! 	defined to avoid repetitive conditional inclusion of the STL FS.
+//!
 //! \license Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0.html
 //! > 	Simple explanation: https://tldrlegal.com/license/apache-license-2.0-(apache-2.0)
 //!
@@ -13,6 +17,18 @@
 
 #include <vector>
 #include <fstream>
+
+#ifdef INCLUDE_STL_FS
+#if defined(__has_include) && __has_include(<filesystem>)
+	#include <filesystem>
+	namespace fs = std::filesystem;
+#elif defined(__has_include) && __has_include(<experimental/filesystem>)
+	#include <experimental/filesystem>
+	namespace fs = std::experimental::filesystem;
+#else
+	#error "STL filesystem is not available. The native alternative is not implemented."
+#endif // __has_include
+#endif // INCLUDE_STL_FS
 
 
 using std::vector;
@@ -95,5 +111,11 @@ public:
 };
 
 using FileWrappers = vector<FileWrapper>;
+
+//! \brief Open files corresponding to the specified entries
+//!
+//! \param names vector<const char*>&  - file or directory names
+//! \return FileWrappers  - opened files
+FileWrappers openFiles(vector<const char*>& names);
 
 #endif // FILEIO_H
