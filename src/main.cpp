@@ -8,15 +8,11 @@
 //! \email luart@ya.ru
 //! \date 2017-02-01
 
-#include <cstdio>
-#include <string>
-
 #include "cmdline.h"  // Arguments parsing
 #define INCLUDE_STL_FS
 #include "fileio.h"
 
 
-using std::string;
 using fs::is_directory;
 using fs::exists;
 
@@ -45,13 +41,10 @@ int main(int argc, char **argv)
 			outpname = name + ".cnl";
 	}
 
-	// Check whether the output already exists
-	if(exists(outpname)) {
-		fprintf(stderr, "WARNING, the output file '%s' already exists, rewrite it: %i\n"
-			, outpname.c_str(), args_info.rewrite_flag);
-		if(!args_info.rewrite_flag)
-			return 1;
-	}
+	// Create the output file checking it's existence
+	FileWrapper fout = createFile(outpname, args_info.rewrite_flag);
+	if(!fout)
+		return 1;
 
 	// Open input files (clusterings on multiple resolution levels)
 	vector<const char*>  names;
@@ -62,9 +55,8 @@ int main(int argc, char **argv)
 	if(files.empty())
 		return 1;
 
-//	auto clusters = loadClusters(files, args_info.fixed-nodes, args_info.min_size_arg, args_info.max_size_arg);
-//	outputClusters(clusters)
+	mergeClusters(fout, files, args_info.btm_size_arg, args_info.top_size_arg);
+	printf("%lu CNL files merged into %s\n", files.size(), outpname.c_str());
 
-    printf("Output file name: %s\n", outpname.c_str());
     return 0;
 }

@@ -39,14 +39,12 @@ struct gengetopt_args_info
 {
   const char *help_help; /**< @brief Print help and exit help description.  */
   const char *version_help; /**< @brief Print version and exit help description.  */
-  long min_size_arg;	/**< @brief bottom margin of the cluster size to process (default='0').  */
-  char * min_size_orig;	/**< @brief bottom margin of the cluster size to process original value given at command line.  */
-  const char *min_size_help; /**< @brief bottom margin of the cluster size to process help description.  */
-  long max_size_arg;	/**< @brief top margin of the cluster size to process (default='0').  */
-  char * max_size_orig;	/**< @brief top margin of the cluster size to process original value given at command line.  */
-  const char *max_size_help; /**< @brief top margin of the cluster size to process help description.  */
-  int fixed_nodes_flag;	/**< @brief fix the number of nodes adding single-node clusters for the filtered-out nodes (default=on).  */
-  const char *fixed_nodes_help; /**< @brief fix the number of nodes adding single-node clusters for the filtered-out nodes help description.  */
+  long btm_size_arg;	/**< @brief bottom margin of the cluster size to process (default='0').  */
+  char * btm_size_orig;	/**< @brief bottom margin of the cluster size to process original value given at command line.  */
+  const char *btm_size_help; /**< @brief bottom margin of the cluster size to process help description.  */
+  long top_size_arg;	/**< @brief top margin of the cluster size to process (default='0').  */
+  char * top_size_orig;	/**< @brief top margin of the cluster size to process original value given at command line.  */
+  const char *top_size_help; /**< @brief top margin of the cluster size to process help description.  */
   int rewrite_flag;	/**< @brief rewrite already existing resulting file or skip the processing (default=off).  */
   const char *rewrite_help; /**< @brief rewrite already existing resulting file or skip the processing help description.  */
   char * output_arg;	/**< @brief output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl (default='clusters.cnl').  */
@@ -55,9 +53,8 @@ struct gengetopt_args_info
   
   unsigned int help_given ;	/**< @brief Whether help was given.  */
   unsigned int version_given ;	/**< @brief Whether version was given.  */
-  unsigned int min_size_given ;	/**< @brief Whether min-size was given.  */
-  unsigned int max_size_given ;	/**< @brief Whether max-size was given.  */
-  unsigned int fixed_nodes_given ;	/**< @brief Whether fixed-nodes was given.  */
+  unsigned int btm_size_given ;	/**< @brief Whether btm-size was given.  */
+  unsigned int top_size_given ;	/**< @brief Whether top-size was given.  */
   unsigned int rewrite_given ;	/**< @brief Whether rewrite was given.  */
   unsigned int output_given ;	/**< @brief Whether output was given.  */
 

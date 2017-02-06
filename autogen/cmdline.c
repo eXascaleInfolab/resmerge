@@ -36,9 +36,8 @@ const char *gengetopt_args_info_description = "";
 const char *gengetopt_args_info_help[] = {
   "  -h, --help           Print help and exit",
   "  -V, --version        Print version and exit",
-  "  -s, --min-size=LONG  bottom margin of the cluster size to process\n                         (default=`0')",
-  "  -S, --max-size=LONG  top margin of the cluster size to process  (default=`0')",
-  "  -n, --fixed-nodes    fix the number of nodes adding single-node clusters for\n                         the filtered-out nodes  (default=on)",
+  "  -b, --btm-size=LONG  bottom margin of the cluster size to process\n                         (default=`0')",
+  "  -t, --top-size=LONG  top margin of the cluster size to process  (default=`0')",
   "  -r, --rewrite        rewrite already existing resulting file or skip the\n                         processing  (default=off)",
   "  -o, --output=STRING  output file name. If a single directory <dirname> is\n                         specified then the default output file name is\n                         <dirname>.cnl  (default=`clusters.cnl')",
   "\n  clusterings  - clusterings specified by the listed given and all files in the\ngiven directories",
@@ -69,9 +68,8 @@ void clear_given (struct gengetopt_args_info *args_info)
 {
   args_info->help_given = 0 ;
   args_info->version_given = 0 ;
-  args_info->min_size_given = 0 ;
-  args_info->max_size_given = 0 ;
-  args_info->fixed_nodes_given = 0 ;
+  args_info->btm_size_given = 0 ;
+  args_info->top_size_given = 0 ;
   args_info->rewrite_given = 0 ;
   args_info->output_given = 0 ;
 }
@@ -80,11 +78,10 @@ static
 void clear_args (struct gengetopt_args_info *args_info)
 {
   FIX_UNUSED (args_info);
-  args_info->min_size_arg = 0;
-  args_info->min_size_orig = NULL;
-  args_info->max_size_arg = 0;
-  args_info->max_size_orig = NULL;
-  args_info->fixed_nodes_flag = 1;
+  args_info->btm_size_arg = 0;
+  args_info->btm_size_orig = NULL;
+  args_info->top_size_arg = 0;
+  args_info->top_size_orig = NULL;
   args_info->rewrite_flag = 0;
   args_info->output_arg = gengetopt_strdup ("clusters.cnl");
   args_info->output_orig = NULL;
@@ -98,11 +95,10 @@ void init_args_info(struct gengetopt_args_info *args_info)
 
   args_info->help_help = gengetopt_args_info_help[0] ;
   args_info->version_help = gengetopt_args_info_help[1] ;
-  args_info->min_size_help = gengetopt_args_info_help[2] ;
-  args_info->max_size_help = gengetopt_args_info_help[3] ;
-  args_info->fixed_nodes_help = gengetopt_args_info_help[4] ;
-  args_info->rewrite_help = gengetopt_args_info_help[5] ;
-  args_info->output_help = gengetopt_args_info_help[6] ;
+  args_info->btm_size_help = gengetopt_args_info_help[2] ;
+  args_info->top_size_help = gengetopt_args_info_help[3] ;
+  args_info->rewrite_help = gengetopt_args_info_help[4] ;
+  args_info->output_help = gengetopt_args_info_help[5] ;
   
 }
 
@@ -189,8 +185,8 @@ static void
 cmdline_parser_release (struct gengetopt_args_info *args_info)
 {
   unsigned int i;
-  free_string_field (&(args_info->min_size_orig));
-  free_string_field (&(args_info->max_size_orig));
+  free_string_field (&(args_info->btm_size_orig));
+  free_string_field (&(args_info->top_size_orig));
   free_string_field (&(args_info->output_arg));
   free_string_field (&(args_info->output_orig));
   
@@ -232,12 +228,10 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "help", 0, 0 );
   if (args_info->version_given)
     write_into_file(outfile, "version", 0, 0 );
-  if (args_info->min_size_given)
-    write_into_file(outfile, "min-size", args_info->min_size_orig, 0);
-  if (args_info->max_size_given)
-    write_into_file(outfile, "max-size", args_info->max_size_orig, 0);
-  if (args_info->fixed_nodes_given)
-    write_into_file(outfile, "fixed-nodes", 0, 0 );
+  if (args_info->btm_size_given)
+    write_into_file(outfile, "btm-size", args_info->btm_size_orig, 0);
+  if (args_info->top_size_given)
+    write_into_file(outfile, "top-size", args_info->top_size_orig, 0);
   if (args_info->rewrite_given)
     write_into_file(outfile, "rewrite", 0, 0 );
   if (args_info->output_given)
@@ -498,15 +492,14 @@ cmdline_parser_internal (
       static struct option long_options[] = {
         { "help",	0, NULL, 'h' },
         { "version",	0, NULL, 'V' },
-        { "min-size",	1, NULL, 's' },
-        { "max-size",	1, NULL, 'S' },
-        { "fixed-nodes",	0, NULL, 'n' },
+        { "btm-size",	1, NULL, 'b' },
+        { "top-size",	1, NULL, 't' },
         { "rewrite",	0, NULL, 'r' },
         { "output",	1, NULL, 'o' },
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "hVs:S:nro:", long_options, &option_index);
+      c = getopt_long (argc, argv, "hVb:t:ro:", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -522,36 +515,26 @@ cmdline_parser_internal (
           cmdline_parser_free (&local_args_info);
           exit (EXIT_SUCCESS);
 
-        case 's':	/* bottom margin of the cluster size to process.  */
+        case 'b':	/* bottom margin of the cluster size to process.  */
         
         
-          if (update_arg( (void *)&(args_info->min_size_arg), 
-               &(args_info->min_size_orig), &(args_info->min_size_given),
-              &(local_args_info.min_size_given), optarg, 0, "0", ARG_LONG,
+          if (update_arg( (void *)&(args_info->btm_size_arg), 
+               &(args_info->btm_size_orig), &(args_info->btm_size_given),
+              &(local_args_info.btm_size_given), optarg, 0, "0", ARG_LONG,
               check_ambiguity, override, 0, 0,
-              "min-size", 's',
+              "btm-size", 'b',
               additional_error))
             goto failure;
         
           break;
-        case 'S':	/* top margin of the cluster size to process.  */
+        case 't':	/* top margin of the cluster size to process.  */
         
         
-          if (update_arg( (void *)&(args_info->max_size_arg), 
-               &(args_info->max_size_orig), &(args_info->max_size_given),
-              &(local_args_info.max_size_given), optarg, 0, "0", ARG_LONG,
+          if (update_arg( (void *)&(args_info->top_size_arg), 
+               &(args_info->top_size_orig), &(args_info->top_size_given),
+              &(local_args_info.top_size_given), optarg, 0, "0", ARG_LONG,
               check_ambiguity, override, 0, 0,
-              "max-size", 'S',
-              additional_error))
-            goto failure;
-        
-          break;
-        case 'n':	/* fix the number of nodes adding single-node clusters for the filtered-out nodes.  */
-        
-        
-          if (update_arg((void *)&(args_info->fixed_nodes_flag), 0, &(args_info->fixed_nodes_given),
-              &(local_args_info.fixed_nodes_given), optarg, 0, 0, ARG_FLAG,
-              check_ambiguity, override, 1, 0, "fixed-nodes", 'n',
+              "top-size", 't',
               additional_error))
             goto failure;
         

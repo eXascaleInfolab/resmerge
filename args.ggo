@@ -8,9 +8,12 @@ purpose "Merges multiple clusterings on multiple resolutions into the single set
 
 usage "resmerge [OPTIONS] clusterings"
 
-option  "min-size" s  "bottom margin of the cluster size to process"  long default="0"
-option  "max-size" S  "top margin of the cluster size to process"  long default="0"
-option  "fixed-nodes" n  "fix the number of nodes adding single-node clusters for the filtered-out nodes"  flag on
+option  "btm-size" b  "bottom margin of the cluster size to process"  long default="0"
+#option  "min-size" s  "bottom margin of the cluster size to process"  long default="0"
+option  "top-size" t  "top margin of the cluster size to process"  long default="0"
+#option  "max-size" S  "top margin of the cluster size to process"  long default="0"
+# Note: fixed node base is nor really necessary and has rather complex implementation
+#option  "fixed-nodes" n  "fix the number of nodes adding single-node clusters for the filtered-out nodes"  flag on
 option  "rewrite" r  "rewrite already existing resulting file or skip the processing"  flag off
 option  "output" o  "output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl"  string default="clusters.cnl"
 
