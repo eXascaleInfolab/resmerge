@@ -43,6 +43,10 @@ bool StringBuffer::readline(FILE* input)
 #endif // HEAVY_VALIDATION
 	// Read data from file until the string is read or an error occurs
 	while(fgets(data() + m_cur, size() - m_cur, input) && data()[size()-2]) {
+#if TRACE >= 3  // Verified
+		fprintf(stderr, "readline(), resizing buffer of %lu bytes, %lu pos: %s\n"
+			, size(), m_cur, data());
+#endif // TRACE
 		m_cur = size() - 1;  // Start overwriting ending '0' of the string
 		resize(size() + spagesize, 0);
 	}
