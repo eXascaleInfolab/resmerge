@@ -436,7 +436,9 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin,
 					hashedmbs += agghash.size();
 #endif // TRACE
 					clstr.pop_back();  // Remove the ending ' '
-					clstr.push_back('\n');
+					// Consider the case when ' ' was added after '\n'
+                    if(clstr.back() != '\n')
+						clstr.push_back('\n');
 					fputs(clstr.c_str(), fout);
 				}
 			}
