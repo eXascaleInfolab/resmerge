@@ -8,6 +8,8 @@
 //! \email luart@ya.ru
 //! \date 2017-02-01
 
+#include <string>
+#include <functional>  // hash
 #include <cstring>  // strtok
 #include <cmath>  // sqrt
 #include <cassert>
@@ -19,11 +21,11 @@
 #include <sys/stat.h>
 #endif // __unix__
 
-#include "internal.h"
 #define INCLUDE_STL_FS
 #include "fileio.h"
 
 
+using std::string;
 using std::error_code;
 using std::invalid_argument;
 using std::numeric_limits;
@@ -34,6 +36,26 @@ using fs::is_directory;
 using fs::exists;
 using fs::status;
 using fs::directory_iterator;
+
+// Internal types definitions --------------------------------------------------
+void AggHash::add(Id id) noexcept
+{
+	++m_size;
+	m_idsum += id;
+	m_id2sum += id * id;
+}
+
+void AggHash::clear() noexcept
+{
+	m_size = 0;
+	m_idsum = 0;
+	m_id2sum = 0;
+}
+
+size_t AggHash::hash() const
+{
+	return std::hash<string>()(string(reinterpret_cast<const char*>(this), sizeof *this));
+}
 
 // Accessory types definitions -------------------------------------------------
 bool StringBuffer::readline(FILE* input)
@@ -48,7 +70,8 @@ bool StringBuffer::readline(FILE* input)
 			, size(), m_cur, data());
 #endif // TRACE
 		m_cur = size() - 1;  // Start overwriting ending '0' of the string
-		resize(size() + spagesize, 0);
+		resize(size() + (size() / (spagesize * 2) + 1) * spagesize);
+		data()[size() - 2] = 0;  // Set prelast element to 0
 	}
 #if HEAVY_VALIDATION >= 2
 	assert((!m_cur || strlen(data()) >= m_cur) && "readline(), string size validation failed");
@@ -325,7 +348,8 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin,
 	Size  totmbs = 0;  // Total number of members (nodes with repetitions) read from all files
 	Size  hashedmbs = 0;  // Total number of members (nodes with repetitions) in the hashed clusters from all files
 #endif // TRACE
-	constexpr char  mbdelim[] = " \t";  // Delimiter for the members
+	// ATTENTION: without '\n' delimiter the terminating '\n' is read as an item
+	constexpr char  mbdelim[] = " \t\n";  // Delimiter for the members
 	// Note: strings defined out of the cycle to avoid reallocations
 	StringBuffer  line;  // Reading line
 	string  clstr;  // Writing cluster string
@@ -412,6 +436,13 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin,
 				// In the latter case abs diff of shares instead of co occurrence
 				// counting should be performed.
 				Id  nid = strtoul(tok, nullptr, 10);
+#if HEAVY_VALIDATION >= 2
+				if(!nid && tok[0] != '0') {
+					fprintf(stderr, "WARNING mergeCollections(), conversion error of '%s' into 0: %s\n"
+						, tok, strerror(errno));
+					continue;
+				}
+#endif // HEAVY_VALIDATION
 				cnds.push_back(nid);
 				agghash.add(nid);
 				clstr.append(tok) += ' ';

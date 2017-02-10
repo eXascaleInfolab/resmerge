@@ -216,10 +216,12 @@ using NamedFileWrappers = vector<NamedFileWrapper>;
 using StringBufferBase = vector<char>;
 
 //! \brief String buffer to real file by lines using c-strings
-class StringBuffer: public StringBufferBase {
-	constexpr static size_t  spagesize = 4096;
+class StringBuffer: protected StringBufferBase {
+	constexpr static size_t  spagesize = 4096;  // Small page size on x64
 
 	size_t  m_cur;  //! Current position for the writing
+//protected:
+//	StringBufferBase::size();
 public:
     //! \brief
     //! \post the allocated buffer will have size >= 2
@@ -229,10 +231,14 @@ public:
 	{
 		if(size <= 2)
 			size = 2;
-		data()[0] = 0;
+		data()[0] = 0;  // Set first element to 0
 		data()[size-2] = 0;  // Set prelast element to 0
 	}
 
+    //! \brief Reset the string and it's shrink the allocated buffer
+    //!
+    //! \param size=spagesize size_t  - new initial size of the string buffer
+    //! \return void
 	void reset(size_t size=spagesize)
 	{
 		// Reset writing position
@@ -240,10 +246,15 @@ public:
 		// Reset the buffer
 		resize(size);
 		shrink_to_fit();  // Free reserved memory
-		data()[0] = 0;
+		data()[0] = 0;  // Set first element to 0
 		data()[size-2] = 0;  // Set prelast element to 0
 	}
 
+    //! \brief Read line from the file and store including the terminating '\n' symbol
+    //!
+    //! \param input FILE*  - processing file
+    //! \return bool  - whether the following line available and the current one
+    //! 	is read without any errors
 	bool readline(FILE* input);
 
     //! \brief whether the string is empty
@@ -256,6 +267,10 @@ public:
 
     //! \brief Const C-string including '\n' if it was present in the file
 	operator const char*() const noexcept  { return data(); }
+
+    //! \brief Make public indexing operators
+	using StringBufferBase::operator[];
+	using StringBufferBase::at;
 };
 
 // Main types definitions ------------------------------------------------------
