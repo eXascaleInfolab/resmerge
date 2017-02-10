@@ -288,6 +288,7 @@ NamedFileWrappers openFiles(vector<const char*>& names)
 		}
 		// Fetch all files under the specified directories (single level traversing)
 		if(is_directory(nstat)) {
+			++inpdirs;
 			for(const auto& detry: directory_iterator(npath)) {
 				if(is_directory(detry))
 					continue;
@@ -297,6 +298,7 @@ NamedFileWrappers openFiles(vector<const char*>& names)
 				else perror((string("WARNING openFiles(), can't open ") += detry.path()).c_str());
 			}
 		} else {
+			++inpfiles;
 			NamedFileWrapper  finp(npath.c_str(), "r");
 			if(finp)
 				files.push_back(move(finp));
@@ -457,14 +459,12 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin,
 			} while((tok = strtok(nullptr, mbdelim)));
 #if TRACE >= 2
 			totmbs += agghash.size();
+			++fclsnum;  // The number of valid read lines, i.e. clusters
 #endif // TRACE
 
 			// Filter read cluster by size
 			if(cnds.size() >= cmin && (!cmax || cnds.size() >= cmax)) {
 				uniqnds.insert(cnds.begin(), cnds.end());
-#if TRACE >= 2
-				++fclsnum;  // The number of valid read lines, i.e. clusters
-#endif // TRACE
 				// Save clstr to the output file if such hash has not been processed yet
 				if(chashes.insert(agghash.hash()).second) {
 #if TRACE >= 2
