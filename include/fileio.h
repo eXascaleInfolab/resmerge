@@ -17,7 +17,9 @@
 
 #include <cstdio>  // FILE
 #include <string>
+#include <vector>
 //#include <fstream>
+#include <utility>  // move
 
 #ifdef INCLUDE_STL_FS
 #if defined(__has_include) && __has_include(<filesystem>)
@@ -35,32 +37,43 @@
 
 
 using std::string;
-//using std::pair;
+using std::vector;
+using std::move;
+
+constexpr char  PATHSEP =
+#if !defined(_WIN32)
+	'/'
+#else
+	'\\'
+#endif // _WIN32
+;  // Path separator
 
 // Accessory types definitions -------------------------------------------------
 //! \brief Wrapper around the FILE* to prevent hanging file descriptors
 class FileWrapper {
-    FILE*  dsc;
-    bool  tidy;
+    FILE*  m_dsc;
+    bool  m_tidy;
 public:
     //! \brief Constructor
+    //!
     //! \param fd FILE*  - the file descriptor to be held
     //! \param cleanup=true bool  - close the file descriptor on destruction
     //! 	(typically false if stdin/out is supplied)
     FileWrapper(FILE* fd=nullptr, bool cleanup=true) noexcept
-    : dsc(fd), tidy(cleanup)  {}
+    : m_dsc(fd), m_tidy(cleanup)  {}
 
     //! \brief Copy constructor
     //! \note Any file descriptor should have a single owner
     FileWrapper(const FileWrapper&)=delete;
 
 	//! \brief Move constructor
-	// ATTENTION: fw.dsc is not set to nullptr by the default move operation
-	// ATTENTION:  std::vector will move their elements if the elements' move constructor is noexcept, and copy otherwise (unless the copy constructor is not accessible)
+	// ATTENTION: fw.m_dsc is not set to nullptr by the default move operation
+	// ATTENTION: std::vector will move their elements if the elements' move constructor
+	// is noexcept, and copy otherwise (unless the copy constructor is not accessible)
     FileWrapper(FileWrapper&& fw) noexcept
-    : FileWrapper(fw.dsc, fw.tidy)
+    : FileWrapper(fw.m_dsc, fw.m_tidy)
     {
-    	fw.dsc = nullptr;
+    	fw.m_dsc = nullptr;
     }
 
     //! \brief Copy assignment
@@ -68,27 +81,27 @@ public:
     FileWrapper& operator= (const FileWrapper&)=delete;
 
 	//! \brief Move assignment
-	// ATTENTION: fw.dsc is not set to nullptr by the default move operation
+	// ATTENTION: fw.m_dsc is not set to nullptr by the default move operation
     FileWrapper& operator= (FileWrapper&& fw) noexcept
     {
-    	reset(fw.dsc, fw.tidy);
-    	fw.dsc = nullptr;
+    	reset(fw.m_dsc, fw.m_tidy);
+    	fw.m_dsc = nullptr;
     	return *this;
     }
 
     //! \brief Destructor
     ~FileWrapper()  // noexcept by default
     {
-        if(dsc && tidy) {
-            fclose(dsc);
-            dsc = nullptr;
+        if(m_dsc && m_tidy) {
+            fclose(m_dsc);
+            m_dsc = nullptr;
         }
     }
 
     //! \brief Implicit conversion to the file descriptor
     //!
     //! \return FILE*  - self as a file descriptor
-    operator FILE*() const noexcept  { return dsc; }
+    operator FILE*() const noexcept  { return m_dsc; }
 
     //! \brief Reset the wrapper
     //!
@@ -98,10 +111,10 @@ public:
     //! \return void
 	void reset(FILE* fd=nullptr, bool cleanup=true) noexcept
 	{
-        if(dsc && tidy)
-            fclose(dsc);
-    	dsc = fd;
-    	tidy = cleanup;
+        if(m_dsc && m_tidy)
+            fclose(m_dsc);
+    	m_dsc = fd;
+    	m_tidy = cleanup;
 	}
 
     //! \brief Release ownership of the holding file
@@ -109,18 +122,97 @@ public:
     //! \return FILE*  - file descriptor
     FILE* release() noexcept
     {
-    	auto fd = dsc;
-    	dsc = nullptr;
+    	auto fd = m_dsc;
+    	m_dsc = nullptr;
 		return fd;
     }
 };
 
-using FileWrappers = vector<FileWrapper>;
+//using FileWrappers = vector<FileWrapper>;
 
-using StringBase = vector<char>;
+//! \brief Wrapper around the FILE* that holds also the filename giving ability
+//! to reopen it and perform meaningful
+// Note: we can't inherit from the FileWrapper because semantic of reset differs
+class NamedFileWrapper {
+	FileWrapper  m_file;  //!< File descriptor
+	string  m_name;  //!< File name
+public:
+    //! \brief Constructor
+    //! \pre Parent directory must exists
+    //!
+    //! \param filename const char*  - new file name to be opened
+    //! \param mode const char*  - opening mode, the same as fopen() has
+	NamedFileWrapper(const char* filename=nullptr, const char* mode=nullptr) noexcept
+	: m_file(fopen(filename, mode)), m_name(filename)  {}
+
+    //! \brief Copy constructor
+    //! \note Any file descriptor should have a single owner
+    NamedFileWrapper(const NamedFileWrapper&)=delete;
+
+	//! \brief Move constructor
+	// ATTENTION: std::vector will move their elements if the elements' move constructor
+	// is noexcept, and copy otherwise (unless the copy constructor is not accessible)
+    NamedFileWrapper(NamedFileWrapper&& fw) noexcept
+    : m_file(move(fw.m_file)), m_name(move(fw.m_name))  {}
+
+    //! \brief Copy assignment
+    //! \note Any file descriptor should have the single owner
+    NamedFileWrapper& operator= (const NamedFileWrapper&)=delete;
+
+	//! \brief Move assignment
+    NamedFileWrapper& operator= (NamedFileWrapper&& fw) noexcept
+    {
+    	m_file = move(fw.m_file);
+    	m_name = move(fw.m_name);
+    	return *this;
+    }
+
+    //! \brief File name
+    //!
+    //! \return const string&  - file name
+    const string& name() const noexcept  { return m_name; }
+
+    //! \brief Implicit conversion to the file descriptor
+    //!
+    //! \return FILE*  - file descriptor
+    operator FILE*() const noexcept  { return m_file; }
+
+    //! \brief Reopen the file under another mode
+    //!
+    //! \param mode const char*  - the mode of operations, the same as in fopen()
+    //! \return NamedFileWrapper&  - the reopened file or closed (if can't be opened)
+    NamedFileWrapper& reopen(const char* mode) noexcept
+    {
+		m_file.reset(freopen(m_name.c_str(), mode, m_file));
+		return *this;
+    }
+
+    //! \brief Reset the file, closes current file and opens another one
+    //! \pre Parent directory must exists
+    //!
+    //! \param filename const char*  - new file name to be opened
+    //! \param mode const char*  - opening mode, the same as fopen() has
+    //! \return NamedFileWrapper&  - the newly opened file or just the old one closed
+	NamedFileWrapper& reset(const char* filename, const char* mode) noexcept
+	{
+		m_file.reset(fopen(filename, mode));
+		return *this;
+	}
+
+    //! \brief Release ownership of the holding file
+    //!
+    //! \return FILE*  - file descriptor
+    FILE* release() noexcept  { return m_file.release(); }
+};
+
+//! \brief Unordered container of NamedFileWrapper-s
+using NamedFileWrappers = vector<NamedFileWrapper>;
+
+//! \brief Base of the StringBuffer
+using StringBufferBase = vector<char>;
 
 //! \brief String buffer to real file by lines using c-strings
-class StringBuffer: public StringBase {
+class StringBuffer: public StringBufferBase {
 	constexpr static size_t  spagesize = 4096;
 
 	size_t  m_cur;  //! Current position for the writing
@@ -129,7 +221,7 @@ public:
     //! \post the allocated buffer will have size >= 2
     //!
     //! \param size=spagesize size_t  - size of the buffer
-	StringBuffer(size_t size=spagesize): StringBase(size), m_cur(0)
+	StringBuffer(size_t size=spagesize): StringBufferBase(size), m_cur(0)
 	{
 		if(size <= 2)
 			size = 2;
@@ -238,18 +330,20 @@ void ensureDir(const string& dir);
 
 //! \brief  Parse the header of CNL file
 //!
-//! \param fcls FileWrapper&  - the reading file
+//! \param fcls NamedFileWrapper&  - the reading file
 //! \param line StringBuffer&  - processing line (string, header) being read from the file
 //! \param[out] clsnum size_t&  - resulting number of clusters if specified, 0 in case of parsing errors
 //! \param[out] ndsnum size_t&  - resulting number of nodes if specified, 0 in case of parsing errors
 //! \return void
-void parseHeader(FileWrapper& fcls, StringBuffer& line, size_t& clsnum, size_t& ndsnum);
+void parseHeader(NamedFileWrapper& fcls, StringBuffer& line, size_t& clsnum, size_t& ndsnum);
 
 //! \brief Estimate the number of nodes from the CNL file size
 //!
 //! \param size size_t  - the number of bytes in the CNL file
+//! \param membership=1.f float  - average membership of the node,
+//! 	> 0, typically ~= 1
 //! \return Id  - estimated number of nodes
-Id estimateNodes(size_t size);
+Id estimateNodes(size_t size, float membership=1.f);
 
 //! \brief Estimate the number of clusters from the number of nodes
 //!
@@ -272,16 +366,25 @@ inline Id estimateClusters(Id ndsnum);
 //!
 //! \param outpname const string&  - name of the output file
 //! \param rewrite=false bool  - whether to rewrite the file if exists
-//! \return FileWrapper  - resulting output file opened for writing
+//! \return NamedFileWrapper  - resulting output file opened for writing
 //! 	or nullptr if exists and should not be rewritten
-FileWrapper createFile(const string& outpname, bool rewrite=false);
+NamedFileWrapper createFile(const string& outpname, bool rewrite=false);
 
 //! \brief Open files corresponding to the specified entries
 //!
 //! \param names vector<const char*>&  - file or directory names
-//! \return FileWrappers  - opened files
-FileWrappers openFiles(vector<const char*>& names);
+//! \return NamedFileWrappers  - opened files
+NamedFileWrappers openFiles(vector<const char*>& names);
 
-void mergeClusters(FileWrapper& fout, FileWrappers& files, Id cmin=0, Id cmax=0);
+//! \brief Merge collections of clusters filtering by size retaining unique clusters.
+//! 	Typically used to flatten a hierarchy or multiple resolutions.
+//! \note Clusters are unique respecting the order-independent members (node ids)
+//!
+//! \param fout NamedFileWrapper&  - output file for the resulting collection
+//! \param files NamedFileWrappers&  - input collections
+//! \param cmin=0 Id  - min allowed cluster size
+//! \param cmax=0 Id  - max allowed cluster size, 0 means any size
+//! \return void
+void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin=0, Id cmax=0);
 
 #endif // FILEIO_H

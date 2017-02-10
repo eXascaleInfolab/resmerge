@@ -27,7 +27,7 @@
 
 const char *gengetopt_args_info_purpose = "Merges multiple clusterings on multiple resolutions into the single set of\nclusters with optional filtering.";
 
-const char *gengetopt_args_info_usage = "Usage: resmerge [OPTIONS] clusterings";
+const char *gengetopt_args_info_usage = "Usage: resmerge [OPTIONS] clusterings\n\n  clusterings  - clusterings specified by the given files and directories\n(non-recursive traversing)";
 
 const char *gengetopt_args_info_versiontext = "";
 
@@ -40,7 +40,6 @@ const char *gengetopt_args_info_help[] = {
   "  -t, --top-size=LONG  top margin of the cluster size to process  (default=`0')",
   "  -r, --rewrite        rewrite already existing resulting file or skip the\n                         processing  (default=off)",
   "  -o, --output=STRING  output file name. If a single directory <dirname> is\n                         specified then the default output file name is\n                         <dirname>.cnl  (default=`clusters.cnl')",
-  "\n  clusterings  - clusterings specified by the listed given and all files in the\ngiven directories",
     0
 };
 

@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 	}
 
 	// Create the output file checking it's existence
-	FileWrapper fout = createFile(outpname, args_info.rewrite_flag);
+	NamedFileWrapper fout = createFile(outpname, args_info.rewrite_flag);
 	if(!fout)
 		return 1;
 
@@ -55,7 +55,7 @@ int main(int argc, char **argv)
 	if(files.empty())
 		return 1;
 
-	mergeClusters(fout, files, args_info.btm_size_arg, args_info.top_size_arg);
+	mergeCollections(fout, files, args_info.btm_size_arg, args_info.top_size_arg);
 	printf("%lu CNL files merged into %s\n", files.size(), outpname.c_str());
 
     return 0;
