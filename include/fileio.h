@@ -111,7 +111,7 @@ public:
     //! \return void
 	void reset(FILE* fd=nullptr, bool cleanup=true) noexcept
 	{
-        if(m_dsc && m_tidy)
+        if(m_dsc && m_tidy && m_dsc != fd)
             fclose(m_dsc);
     	m_dsc = fd;
     	m_tidy = cleanup;
@@ -142,8 +142,9 @@ public:
     //!
     //! \param filename const char*  - new file name to be opened
     //! \param mode const char*  - opening mode, the same as fopen() has
-	NamedFileWrapper(const char* filename=nullptr, const char* mode=nullptr) noexcept
-	: m_file(fopen(filename, mode)), m_name(filename)  {}
+	NamedFileWrapper(const char* filename=nullptr, const char* mode=nullptr)
+	: m_file(filename ? fopen(filename, mode) : nullptr)
+	, m_name(filename ? filename : "")  {}
 
     //! \brief Copy constructor
     //! \note Any file descriptor should have a single owner
@@ -181,9 +182,9 @@ public:
     //!
     //! \param mode const char*  - the mode of operations, the same as in fopen()
     //! \return NamedFileWrapper&  - the reopened file or closed (if can't be opened)
-    NamedFileWrapper& reopen(const char* mode) noexcept
+    NamedFileWrapper& reopen(const char* mode)
     {
-		m_file.reset(freopen(m_name.c_str(), mode, m_file));
+		m_file.reset(freopen(nullptr, mode, m_file));  // m_name.c_str()
 		return *this;
     }
 
@@ -193,9 +194,12 @@ public:
     //! \param filename const char*  - new file name to be opened
     //! \param mode const char*  - opening mode, the same as fopen() has
     //! \return NamedFileWrapper&  - the newly opened file or just the old one closed
-	NamedFileWrapper& reset(const char* filename, const char* mode) noexcept
+	NamedFileWrapper& reset(const char* filename, const char* mode)
 	{
-		m_file.reset(fopen(filename, mode));
+		if(filename) {
+			m_file.reset(fopen(filename, mode));
+			m_name = filename;
+		} else m_file.reset();
 		return *this;
 	}
 

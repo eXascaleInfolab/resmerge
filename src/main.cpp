@@ -45,6 +45,9 @@ int main(int argc, char **argv)
 	NamedFileWrapper fout = createFile(outpname, args_info.rewrite_flag);
 	if(!fout)
 		return 1;
+#if TRACE >= 2
+	puts(("Output file created: " + fout.name()).c_str());
+#endif // TRACE
 
 	// Open input files (clusterings on multiple resolution levels)
 	vector<const char*>  names;

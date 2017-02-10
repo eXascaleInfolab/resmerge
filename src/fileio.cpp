@@ -245,8 +245,12 @@ NamedFileWrappers openFiles(vector<const char*>& names)
 {
 	NamedFileWrappers files;  // NRVO (Return Value Optimization) is used
 
-	assert(names.empty() && "openFiles(), entry names are expected");
-	vector<const char*>  unexisting;
+	assert(!names.empty() && "openFiles(), entry names are expected");
+	vector<const char*>  unexisting;  // Unexisting entries
+#if TRACE >= 1
+	Id  inpfiles = 0;  // The number of input files
+	Id  inpdirs = 0;  // The number of input dirs
+#endif // TRACE
 	for(auto name: names) {
 		const auto  npath = fs::path(name);
 		const auto  nstat = status(npath);
@@ -281,7 +285,8 @@ NamedFileWrappers openFiles(vector<const char*>& names)
 	}
 
 #if TRACE >= 1
-	printf("openFiles(), opened %lu entries of %lu\n", files.size(), names.size());
+	printf("openFiles(), opened %lu files from the %u files and %u dirs\n"
+		, files.size(), inpfiles, inpdirs);
 #endif // TRACE
 
 	return files;
@@ -358,10 +363,14 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin,
 			fprintf(stderr, "mergeCollections(), %lu bytes, %lu nodes (estimated: %u)"
 				", %lu clusters\n", cmsbytes, ndsnum, cmsbytes != 0, clsnum);
 #endif // TRACE
-		}
+		} else {
 #if TRACE >= 2
-		else fprintf(stderr, "mergeCollections(),  %lu clusters\n", clsnum);
+			fprintf(stderr, "mergeCollections(), specified %lu clusters, %lu nodes\n"
+				, clsnum, ndsnum);
 #endif // TRACE
+			if(!ndsnum)
+				ndsnum = clsnum * clsnum;  // The expected number of nodes
+		}
 
 		// Preallocate space for the clusters hashes
 		if(chashes.bucket_count() * chashes.max_load_factor() < clsnum)
@@ -445,15 +454,17 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin,
 	if(fout.reopen("r+")) {
 		fseek(fout, hdrprefix.size(), SEEK_SET);
 		// Write the actual number of stored clusters
-		fprintf(fout, "%lu,", chashes.size());
+		if(fprintf(fout, "%lu,", chashes.size()) < 0)
+			perror("WARNING mergeCollections(), failed to update the file header with the number of clusters");
 		// Write the number of unique nodes in the stored clusters
 		fseek(fout, hdrprefix.size() + idvalStub.size() + ndsprefix.size(), SEEK_SET);
-		fprintf(fout, "%lu,", uniqnds.size());
+		if(fprintf(fout, "%lu,", uniqnds.size()) < 0)
+			perror("WARNING mergeCollections(), failed to update the file header with the number of nodes");
 	} else perror(("WARNING mergeCollections(), can't reopen '" + fout.name()
 		+ "', the stub header has not been replaced").c_str());
 #if TRACE >= 2
-	fprintf(stderr, "mergeCollections(),  merged %lu clusters of %lu members into"
-		" %lu clusters %lu members. Reduction rations: %G clusters, %G members\n"
+	fprintf(stderr, "mergeCollections(),  merged %lu clusters, %lu members into"
+		" %lu clusters, %lu members. Resulting rations: %G clusters, %G members\n"
 		, totcls, totmbs, chashes.size(), hashedmbs
 		, float(chashes.size()) / totcls, float(hashedmbs) / totmbs);
 #endif // TRACE
