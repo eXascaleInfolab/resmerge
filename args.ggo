@@ -1,23 +1,28 @@
 # Configuration file for the automatic generation of the input options parsing
 
 package "resmerge"
-version "1.0"
+version "1.1"
 
-purpose "Merges multiple clusterings on multiple resolutions into the single set of clusters with optional filtering."
+purpose "Merge multiple clusterings (resolution/hierarchy levels) with optional filtering of clusters by size and nodes filtering by base."
 
 
 usage "resmerge [OPTIONS] clusterings
 
   clusterings  - clusterings specified by the given files and directories (non-recursive traversing)"
 
+defmode "sync"  modedesc="Synchronize the node base of the merged clustering"
+defmode "exrtact"  modedesc="Exrtact the node base from the specified clustering(s)"
+
 option  "output" o  "output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl"  string default="clusters.cnl"
 option  "rewrite" r  "rewrite already existing resulting file or skip the processing"  flag off
 option  "btm-size" b  "bottom margin of the cluster size to process"  long default="0"
 option  "top-size" t  "top margin of the cluster size to process"  long default="0"
 option  "membership" m  "average expected membership of nodes in the clusters, > 0, typically >= 1"  float default="1"
+modeoption  "sync-base" s  "synchronize node base with the specified collection"  string  mode="sync"
+modeoption  "extract-base" e  "do not merge levels, only extract the node base from the clusterings to the output"  flag off  mode="exrtact"
 
-#option  "min-size" s  "bottom margin of the cluster size to process"  long default="0"
-#option  "max-size" S  "top margin of the cluster size to process"  long default="0"
+#defgroup "mode"  groupdesc="Whether to merge resolution/hierarchy levels with optional filtering of clusters by size and nodes by base, or just extract the node base"
+#option  "extract-base" e  "extract node base from the synchronizing collection to the specified file the same format"  string
 # Note: fixed node base is nor really necessary and has rather complex implementation
 #option  "fixed-nodes" n  "fix the number of nodes adding single-node clusters for the filtered-out nodes"  flag on
 
@@ -60,3 +65,7 @@ args "--default-optional --unamed-opts=clusterings"   # Set opional opions, allo
 #     defgroup "my grp2"
 #     defgroup "grp1" groupdesc="an option of this group is required" required
 #     groupoption "opta" a "string a" group="grp1" multiple
+
+# = Changelog =
+# v1.1 - Sync/extract modes added
+# v1.0 - Initial Release

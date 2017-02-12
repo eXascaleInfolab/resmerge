@@ -8,6 +8,7 @@
 //! \email luart@ya.ru
 //! \date 2017-02-01
 
+#include <cassert>
 #include "cmdline.h"  // Arguments parsing
 #define INCLUDE_STL_FS
 #include "fileio.h"
@@ -34,12 +35,26 @@ int main(int argc, char **argv)
 	{
 		string  name = string(args_info.inputs[0]);  // Name of the first entry
 		// Update default output filename in case single dir is specified
-		if(!args_info.output_given && args_info.inputs_num == 1
-		&& is_directory(name)
-		// Note: "../." like templates are not verified and result in the output to the ..cnl file
-		&& name != "." && name != "..")
-			outpname = name + ".cnl";
+		if(!args_info.output_given && args_info.inputs_num == 1) {
+			if(is_directory(name)
+			// Note: "../." like templates are not verified and result in the output to the ..cnl file
+			&& name != "." && name != "..")
+				outpname = name + (args_info.extract_base_flag ? "_base.cnl" : ".cnl");
+			else if(args_info.extract_base_flag) {
+				outpname = name;
+				auto isep = outpname.find_last_of("./\\");
+				if(isep != string::npos && outpname[isep] == '.') {
+					outpname.insert(isep, "_base");
+				} else {
+					if(isep != string::npos)
+						outpname.pop_back();  // Delete the trailing slash
+					outpname += "_base.cnl";
+				}
+			}
+		}
 	}
+	printf("Arguments parsed:\n\tmode: %s\n\toutput: %s\n"
+		, args_info.extract_base_flag ? "extract" : "merge [& sync]" , outpname.c_str());
 
 	// Create the output file checking it's existence
 	NamedFileWrapper fout = createFile(outpname, args_info.rewrite_flag);
@@ -49,8 +64,20 @@ int main(int argc, char **argv)
 	puts(("Output file created: " + fout.name()).c_str());
 #endif // TRACE
 
+	// Open the node base file to sync with it
+	NamedFileWrapper  fbase;
+	if(args_info.sync_base_given) {
+		auto files = openFiles({args_info.sync_base_arg});
+		if(files.empty())
+			return 1;
+#if HEAVY_VALIDATION >= 2
+		assert(files.size() == 1 && "a single node base file is expected");
+#endif // HEAVY_VALIDATION
+		fbase = move(files.front());
+	}
+
 	// Open input files (clusterings on multiple resolution levels)
-	vector<const char*>  names;
+	FileNames  names;
 	names.reserve(args_info.inputs_num);
 	for(size_t i = 0; i < args_info.inputs_num; ++i)
 		names.push_back(args_info.inputs[i]);
@@ -58,9 +85,15 @@ int main(int argc, char **argv)
 	if(files.empty())
 		return 1;
 
-	mergeCollections(fout, files, args_info.btm_size_arg, args_info.top_size_arg
-		, args_info.membership_arg);
-	printf("%lu CNL files merged into %s\n", files.size(), outpname.c_str());
+	bool success = false;
+	if(!args_info.extract_base_flag)
+		success = mergeCollections(fout, files, fbase, args_info.btm_size_arg
+			, args_info.top_size_arg, args_info.membership_arg);
+	else success = extractBase(fout, files, args_info.btm_size_arg
+			, args_info.top_size_arg, args_info.membership_arg);
+	if(success)
+		printf("%lu CNL files processed into %s\n", files.size(), outpname.c_str());
+	else fputs("WARNING, CNL files processing failed\n", stderr);
 
-    return 0;
+    return !success;  // Return 0 on success
 }

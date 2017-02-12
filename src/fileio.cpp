@@ -150,7 +150,7 @@ void parseHeader(NamedFileWrapper& fcls, StringBuffer& line, size_t& clsnum, siz
     //! \return  - id value of 0 in case of parsing errors
 	auto parseId = []() -> Id {
 		char* tok = strtok(nullptr, " \t,");  // Note: the value can't be ended with ':'
-		errno = 0;
+		//errno = 0;
 		const auto val = strtoul(tok, nullptr, 10);
 		if(errno)
 			perror("WARNING parseId(), id value parsing error");
@@ -228,8 +228,7 @@ size_t fileSize(const NamedFileWrapper& file) noexcept
 //	fseek(file, 0, SEEK_END);
 //	cmsbytes = ftell(file);  // The number of bytes in the input communities
 //	if(cmsbytes == size_t(-1))
-//		fprintf(stderr, "WARNING fileSize(), file size evaluation failed: %s\n"
-//			, strerror(errno));
+//		perror("WARNING fileSize(), file size evaluation failed");
 //	//fprintf(stderr, "  %s: %lu bytes\n", fname, cmsbytes);
 //	rewind(file);  // Set position to the begin of the file
 
@@ -279,6 +278,108 @@ Id estimateClusters(Id ndsnum, float membership) noexcept
 	return clsnum;
 }
 
+UniqIds loadNodes(NamedFileWrapper& file, float membership, Id cmin, Id cmax)
+{
+	UniqIds  nodebase;  // Node base;  Note: returned using NRVO optimization
+
+	if(!file)
+		return nodebase;
+
+	// Note: CNL [CSN] format only is supported
+	size_t  clsnum = 0;  // The number of clusters
+	size_t  ndsnum = 0;  // The number of nodes
+
+	// Note: strings defined out of the cycle to avoid reallocations
+	StringBuffer  line;  // Reading line
+	// Parse header and read the number of clusters if specified
+	parseHeader(file, line, clsnum, ndsnum);
+
+	// Estimate the number of nodes in the file if not specified
+	if(!ndsnum) {
+		if(!clsnum) {
+			size_t  cmsbytes = fileSize(file);
+			if(cmsbytes != size_t(-1))  // File length fetching failed
+				ndsnum = estimateNodes(cmsbytes, membership);
+		} else ndsnum = clsnum * clsnum / membership;  // The expected number of nodes
+#if TRACE >= 2
+		fprintf(stderr, "loadNodes(), estimated %lu nodes\n", ndsnum);
+#endif // TRACE
+	}
+#if TRACE >= 2
+	else fprintf(stderr, "loadNodes(), specified %lu nodes\n", ndsnum);
+#endif // TRACE
+
+	// Preallocate space for nodes
+	if(ndsnum)
+		nodebase.reserve(ndsnum);
+
+	// Load clusters
+	// ATTENTION: without '\n' delimiter the terminating '\n' is read as an item
+	constexpr char  mbdelim[] = " \t\n";  // Delimiter for the members
+	vector<Id>  cnds;  // Cluster nodes. Note: a dedicated container is required to filter clusters by size
+	cnds.reserve(sqrt(ndsnum));  // Note: typically cluster size does not increase the square root of the number of nodes
+#if TRACE >= 2
+	size_t  totmbs = 0;  // The number of read member nodes from the file including repetitions
+	size_t  fclsnum = 0;  // The number of read clusters from the file
+#endif // TRACE
+	do {
+		char *tok = strtok(line, mbdelim);  // const_cast<char*>(line.data())
+
+		// Skip comments
+		if(!tok || tok[0] == '#')
+			continue;
+		// Skip the cluster id if present
+		if(tok[strlen(tok) - 1] == '>') {
+			const char* cidstr = tok;
+			tok = strtok(nullptr, mbdelim);
+			// Skip empty clusters, which actually should not exist
+			if(!tok) {
+				fprintf(stderr, "WARNING loadNodes(), empty cluster"
+					" exists: '%s', skipped\n", cidstr);
+				continue;
+			}
+		}
+		do {
+			// Note: only node id is parsed, share part is skipped if exists,
+			// but potentially can be considered in NMI and F1 evaluation.
+			// In the latter case abs diff of shares instead of co occurrence
+			// counting should be performed.
+			Id  nid = strtoul(tok, nullptr, 10);
+#if HEAVY_VALIDATION >= 2
+			if(!nid && tok[0] != '0') {
+				fprintf(stderr, "WARNING loadNodes(), conversion error of '%s' into 0: %s\n"
+					, tok, strerror(errno));
+				continue;
+			}
+#endif // HEAVY_VALIDATION
+#if TRACE >= 2
+			++totmbs;  // Update the total number of read members
+#endif // TRACE
+			cnds.push_back(nid);
+		} while((tok = strtok(nullptr, mbdelim)));
+#if TRACE >= 2
+		++fclsnum;  // The number of valid read lines, i.e. clusters
+#endif // TRACE
+
+		// Filter read cluster by size
+		if(cnds.size() >= cmin && (!cmax || cnds.size() <= cmax))
+			nodebase.insert(cnds.begin(), cnds.end());
+		// Prepare outer vars for the next iteration
+		cnds.clear();
+	} while(line.readline(file));
+//	// Rehash the nodes decreasing the allocated space if required
+//	if(nodebase.size() <= nodebase.bucket_count() * nodebase.max_load_factor() / 3)
+//		nodebase.reserve(nodebase.size());
+#if TRACE >= 2
+	printf("loadNodes(). the loaded base has %lu nodes from the input %lu members and %lu clusters\n"
+		, nodebase.size(), totmbs, fclsnum);
+#else
+	printf("The loaded nodebase: %lu\n", nodebase.size());
+#endif // TRACE
+
+	return nodebase;
+}
+
 // Interface functions definitions ---------------------------------------------
 NamedFileWrapper createFile(const string& outpname, bool rewrite)
 {
@@ -310,12 +411,12 @@ NamedFileWrapper createFile(const string& outpname, bool rewrite)
 	return fout;
 }
 
-NamedFileWrappers openFiles(vector<const char*>& names)
+NamedFileWrappers openFiles(const FileNames& names)
 {
 	NamedFileWrappers files;  // NRVO (Return Value Optimization) is used
 
 	assert(!names.empty() && "openFiles(), entry names are expected");
-	vector<const char*>  unexisting;  // Unexisting entries
+	FileNames  unexisting;  // Unexisting entries
 #if TRACE >= 1
 	Id  inpfiles = 0;  // The number of input files
 	Id  inpdirs = 0;  // The number of input dirs
@@ -365,11 +466,28 @@ NamedFileWrappers openFiles(vector<const char*>& names)
 	return files;
 }
 
-void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
-, Id cmin, Id cmax, float membership)
+bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
+, NamedFileWrapper& fbase, Id cmin, Id cmax, float membership)
 {
-	if(!fout)
-		return;
+	if(!fout) {
+		fputs("ERROR extractBase(), the output file is undefined\n", stderr);
+		return false;
+	}
+	// Validate the fout is empty
+	{
+		size_t  fosize = fileSize(fout);
+		if(fosize && fosize != size_t(-1)) {
+			fputs("ERROR extractBase(), the output file should be empty\n", stderr);
+			return false;
+		}
+	}
+
+	// Load the node base, otherwise declare unique member node ids of the merged clusters
+	// Note: the node base clusters are not filtered by size, because they might be loaded
+	// either from the ground-truth collection or from the dedicated node base. The filtering
+	// is performed only on the node base extraction
+	UniqIds  nodebase = loadNodes(fbase, membership);
+	const bool nosync = nodebase.empty();  // Do not sync the node base
 
 	// Write a stub header the actual values of clusters and nodes will be later,
 	// so now just use stubs (' ' of the sufficient length) for them.
@@ -380,7 +498,7 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 		// Set first digit to zero to have a valid header in case the stub header will not be replaced
 		constexpr char zval[] = "0,";
 		idvalStub.replace(0, sizeof zval - 1, zval);  // Note: -1 to not include the null terminator
-		string  header(hdrprefix + idvalStub + ndsprefix + idvalStub  // Note: ',' might be putted on the place of ' ' after the actual value
+		string  header(hdrprefix + idvalStub + ndsprefix + idvalStub  // Note: ',' can be putted later on the place of ' ' after the actual value
 			+ " Fuzzy: 0, Numbered: 0\n");
 		fputs(header.c_str(), fout);
 	}
@@ -389,7 +507,6 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 	// Note: it is not mandatory to evaluate and write the number of unique nodes
 	// in the merged clusters, but it is much cheaper to do it on clusters merging
 	// than on reading the formed files. It will reduce the number of allocations on reading.
-	UniqIds  uniqnds;  // Unique member node ids of the merged clusters
 #if TRACE >= 2
 	Size  totcls = 0;  // Total number of clusters read from all files
 	Size  totmbs = 0;  // Total number of members (nodes with repetitions) read from all files
@@ -435,9 +552,10 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 		if(chashes.bucket_count() * chashes.max_load_factor() < clsnum)
 			chashes.reserve(clsnum);
 		// Preallocate space for nodes
-		if(uniqnds.bucket_count() * uniqnds.max_load_factor() < ndsnum)
-			uniqnds.reserve(ndsnum);
-		cnds.reserve(ndsnum);
+		if(nosync && nodebase.bucket_count() * nodebase.max_load_factor() < ndsnum)
+			nodebase.reserve(ndsnum);
+		// Note: typically the cluster size does not increase the square root of the number of nodes
+		cnds.reserve(sqrt(ndsnum));
 
 		// Load clusters
 #if TRACE >= 2
@@ -474,9 +592,15 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 					continue;
 				}
 #endif // HEAVY_VALIDATION
-				cnds.push_back(nid);
-				agghash.add(nid);
-				clstr.append(tok) += ' ';
+#if TRACE >= 2
+				++totmbs;  // Update the total number of read members
+#endif // TRACE
+				// Filter by the node base if required
+				if(nosync || nodebase.count(nid)) {
+					cnds.push_back(nid);
+					agghash.add(nid);
+					clstr.append(tok) += ' ';
+				}
 				// Note: the number of nodes can't be evaluated here simply incrementing the value,
 				// because clusters might have overlaps, i.e. the nodes might have multiple membership
 				//
@@ -487,13 +611,21 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 				// ~ inversely proportional to the  number of nodes in the cluster
 			} while((tok = strtok(nullptr, mbdelim)));
 #if TRACE >= 2
-			totmbs += agghash.size();
 			++fclsnum;  // The number of valid read lines, i.e. clusters
 #endif // TRACE
 
 			// Filter read cluster by size
-			if(cnds.size() >= cmin && (!cmax || cnds.size() >= cmax)) {
-				uniqnds.insert(cnds.begin(), cnds.end());
+			if(cnds.empty()) {
+#if HEAVY_VALIDATION >= 2
+				assert(!agghash.size() && clstr.empty()
+					&& "mergeCollections(), asynchronous internal containers");
+#endif // HEAVY_VALIDATION
+				continue;
+			}
+			if(cnds.size() >= cmin && (!cmax || cnds.size() <= cmax)) {
+				// Form the node base if it was not specified explicitly
+				if(!nosync)
+					nodebase.insert(cnds.begin(), cnds.end());
 				// Save clstr to the output file if such hash has not been processed yet
 				if(chashes.insert(agghash.hash()).second) {
 #if TRACE >= 2
@@ -503,7 +635,10 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 					// Consider the case when ' ' was added after '\n'
                     if(clstr.back() != '\n')
 						clstr.push_back('\n');
-					fputs(clstr.c_str(), fout);
+					if(fputs(clstr.c_str(), fout) == EOF) {
+						perror("Merged clusters output failed");
+						return false;
+					}
 				}
 			}
 			// Prepare outer vars for the next iteration
@@ -524,7 +659,7 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 			perror("WARNING mergeCollections(), failed to update the file header with the number of clusters");
 		// Write the number of unique nodes in the stored clusters
 		fseek(fout, hdrprefix.size() + idvalStub.size() + ndsprefix.size(), SEEK_SET);
-		if(fprintf(fout, "%lu,", uniqnds.size()) < 0)
+		if(fprintf(fout, "%lu,", nodebase.size()) < 0)
 			perror("WARNING mergeCollections(), failed to update the file header with the number of nodes");
 	} else perror(("WARNING mergeCollections(), can't reopen '" + fout.name()
 		+ "', the stub header has not been replaced").c_str());
@@ -534,4 +669,159 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 		, totcls, totmbs, chashes.size(), hashedmbs
 		, float(chashes.size()) / totcls, float(hashedmbs) / totmbs);
 #endif // TRACE
+
+	return true;
+}
+
+bool extractBase(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin, Id cmax
+, float membership)
+{
+	if(!fout) {
+		fputs("ERROR extractBase(), the output file is undefined\n", stderr);
+		return false;
+	}
+	// Validate the fout is empty
+	{
+		size_t  fosize = fileSize(fout);
+		if(fosize && fosize != size_t(-1)) {
+			fputs("ERROR extractBase(), the output file should be empty\n", stderr);
+			return false;
+		}
+	}
+
+	// Write a stub header the actual values of clusters and nodes will be later,
+	// so now just use stubs (' ' of the sufficient length) for them.
+	string  idvalStub = string(ceil(numeric_limits<Id>::digits10), ' ');
+	const string  hdrprefix = "# Clusters: 1, Nodes: ";  // Store node base as a single cluster
+	{
+		// Set first digit to zero to have a valid header in case the stub header will not be replaced
+		constexpr char zval[] = "0,";
+		idvalStub.replace(0, sizeof zval - 1, zval);  // Note: -1 to not include the null terminator
+		string  header(hdrprefix + idvalStub  // Note: ',' can be putted later on the place of ' ' after the actual value
+			+ " Fuzzy: 0, Numbered: 0\n");
+		fputs(header.c_str(), fout);
+	}
+
+	UniqIds  nodebase;  // Unique node ids
+#if TRACE >= 2
+	Size  totcls = 0;  // Total number of clusters read from all files
+	Size  totmbs = 0;  // Total number of members (nodes with repetitions) read from all files
+#endif // TRACE
+	// ATTENTION: without '\n' delimiter the terminating '\n' is read as an item
+	constexpr char  mbdelim[] = " \t\n";  // Delimiter for the members
+	// Note: strings defined out of the cycle to avoid reallocations
+	StringBuffer  line;  // Reading line
+	vector<Id>  cnds;  // Cluster nodes. Note: a dedicated container is required to filter clusters by size
+	for(auto& file: files) {
+		// Note: CNL [CSN] format only is supported
+		size_t  clsnum = 0;  // The number of clusters
+		size_t  ndsnum = 0;  // The number of nodes
+
+		// Parse header and read the number of clusters if specified
+		parseHeader(file, line, clsnum, ndsnum);
+
+		// Estimate the number of nodes in the file if not specified
+		if(!ndsnum) {
+			if(!clsnum) {
+				size_t  cmsbytes = fileSize(file);
+				if(cmsbytes != size_t(-1))  // File length fetching failed
+					ndsnum = estimateNodes(cmsbytes, membership);
+			} else ndsnum = clsnum * clsnum / membership;  // The expected number of nodes
+#if TRACE >= 2
+			fprintf(stderr, "extractBase(), estimated %lu nodes\n", ndsnum);
+#endif // TRACE
+		}
+#if TRACE >= 2
+		else fprintf(stderr, "extractBase(), specified %lu nodes\n", ndsnum);
+#endif // TRACE
+
+		// Preallocate space for the nodes, but do it seldom and only if not filtered,
+		// because the filtering might cause much smaller node base than it can be estimated
+		if(nodebase.bucket_count() * nodebase.max_load_factor() < ndsnum / 25)
+			nodebase.reserve(ndsnum);
+		// Note: typically the cluster size does not increase the square root of the number of nodes
+		cnds.reserve(sqrt(ndsnum));
+
+		// Load clusters
+#if TRACE >= 2
+		size_t  fclsnum = 0;  // The number of read clusters from the file
+#endif // TRACE
+		do {
+			char *tok = strtok(line, mbdelim);  // const_cast<char*>(line.data())
+
+			// Skip comments
+			if(!tok || tok[0] == '#')
+				continue;
+			// Skip the cluster id if present
+			if(tok[strlen(tok) - 1] == '>') {
+				const char* cidstr = tok;
+				tok = strtok(nullptr, mbdelim);
+				// Skip empty clusters, which actually should not exist
+				if(!tok) {
+					fprintf(stderr, "WARNING extractBase(), empty cluster"
+						" exists: '%s', skipped\n", cidstr);
+					continue;
+				}
+			}
+			do {
+				// Note: only node id is parsed, share part is skipped if exists,
+				// but potentially can be considered in NMI and F1 evaluation.
+				// In the latter case abs diff of shares instead of co occurrence
+				// counting should be performed.
+				Id  nid = strtoul(tok, nullptr, 10);
+#if HEAVY_VALIDATION >= 2
+				if(!nid && tok[0] != '0') {
+					fprintf(stderr, "WARNING extractBase(), conversion error of '%s' into 0: %s\n"
+						, tok, strerror(errno));
+					continue;
+				}
+#endif // HEAVY_VALIDATION
+#if TRACE >= 2
+				++totmbs;  // Update the total number of read members
+#endif // TRACE
+				// Filter by the node base if required
+				cnds.push_back(nid);
+			} while((tok = strtok(nullptr, mbdelim)));
+#if TRACE >= 2
+			++fclsnum;  // The number of valid read lines, i.e. clusters
+#endif // TRACE
+
+			// Filter read cluster by size and form the nodebase
+			if(cnds.size() >= cmin && (!cmax || cnds.size() <= cmax))
+				nodebase.insert(cnds.begin(), cnds.end());
+			// Prepare outer vars for the next iteration
+			cnds.clear();
+		} while(line.readline(file));
+#if TRACE >= 2
+		totcls += fclsnum;
+#endif // TRACE
+	}
+
+	// Update the header with the actual number of clusters
+	if(fout.reopen("r+")) {
+		fseek(fout, hdrprefix.size(), SEEK_SET);
+		// Write the actual number of stored nodes as a single cluster
+		if(fprintf(fout, "%lu,", nodebase.size()) < 0)
+			perror("WARNING extractBase(), failed to update the file header with the number of nodes");
+	} else perror(("WARNING extractBase(), can't reopen '" + fout.name()
+		+ "', the stub header has not been replaced").c_str());
+#if TRACE >= 2
+	fprintf(stderr, "extractBase(),  merged %lu clusters, %lu members into"
+		" the base of %lu nodes. Members ratio to the nodebase: %G\n"
+		, totcls, totmbs, nodebase.size(), totmbs / float(nodebase.size()));
+#endif // TRACE
+
+	// Output the nodebase
+	errno = 0;
+	if(!fseek(fout, 0, SEEK_END)) {
+		for(auto nid: nodebase)
+			fprintf(fout, "%u ", nid);
+		fputs("\n", fout);
+	}
+	if(errno) {
+		perror("Node base output failed");
+		return false;
+	}
+
+	return true;
 }

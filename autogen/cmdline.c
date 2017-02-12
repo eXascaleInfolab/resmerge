@@ -25,7 +25,7 @@
 
 #include "cmdline.h"
 
-const char *gengetopt_args_info_purpose = "Merges multiple clusterings on multiple resolutions into the single set of\nclusters with optional filtering.";
+const char *gengetopt_args_info_purpose = "Merge multiple clusterings (resolution/hierarchy levels) with optional\nfiltering of clusters by size and nodes filtering by base.";
 
 const char *gengetopt_args_info_usage = "Usage: resmerge [OPTIONS] clusterings\n\n  clusterings  - clusterings specified by the given files and directories\n(non-recursive traversing)";
 
@@ -41,6 +41,10 @@ const char *gengetopt_args_info_help[] = {
   "  -b, --btm-size=LONG     bottom margin of the cluster size to process\n                            (default=`0')",
   "  -t, --top-size=LONG     top margin of the cluster size to process\n                            (default=`0')",
   "  -m, --membership=FLOAT  average expected membership of nodes in the clusters,\n                            > 0, typically >= 1  (default=`1')",
+  "\n Mode: sync\n  Synchronize the node base of the merged clustering",
+  "  -s, --sync-base=STRING  synchronize node base with the specified collection",
+  "\n Mode: exrtact\n  Exrtact the node base from the specified clustering(s)",
+  "  -e, --extract-base      do not merge levels, only extract the node base from\n                            the clusterings to the output  (default=off)",
     0
 };
 
@@ -74,6 +78,10 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->btm_size_given = 0 ;
   args_info->top_size_given = 0 ;
   args_info->membership_given = 0 ;
+  args_info->sync_base_given = 0 ;
+  args_info->extract_base_given = 0 ;
+  args_info->exrtact_mode_counter = 0 ;
+  args_info->sync_mode_counter = 0 ;
 }
 
 static
@@ -89,6 +97,9 @@ void clear_args (struct gengetopt_args_info *args_info)
   args_info->top_size_orig = NULL;
   args_info->membership_arg = 1;
   args_info->membership_orig = NULL;
+  args_info->sync_base_arg = NULL;
+  args_info->sync_base_orig = NULL;
+  args_info->extract_base_flag = 0;
   
 }
 
@@ -104,6 +115,8 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->btm_size_help = gengetopt_args_info_help[4] ;
   args_info->top_size_help = gengetopt_args_info_help[5] ;
   args_info->membership_help = gengetopt_args_info_help[6] ;
+  args_info->sync_base_help = gengetopt_args_info_help[8] ;
+  args_info->extract_base_help = gengetopt_args_info_help[10] ;
   
 }
 
@@ -195,6 +208,8 @@ cmdline_parser_release (struct gengetopt_args_info *args_info)
   free_string_field (&(args_info->btm_size_orig));
   free_string_field (&(args_info->top_size_orig));
   free_string_field (&(args_info->membership_orig));
+  free_string_field (&(args_info->sync_base_arg));
+  free_string_field (&(args_info->sync_base_orig));
   
   
   for (i = 0; i < args_info->inputs_num; ++i)
@@ -244,6 +259,10 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "top-size", args_info->top_size_orig, 0);
   if (args_info->membership_given)
     write_into_file(outfile, "membership", args_info->membership_orig, 0);
+  if (args_info->sync_base_given)
+    write_into_file(outfile, "sync-base", args_info->sync_base_orig, 0);
+  if (args_info->extract_base_given)
+    write_into_file(outfile, "extract-base", 0, 0 );
   
 
   i = EXIT_SUCCESS;
@@ -465,6 +484,29 @@ int update_arg(void *field, char **orig_field,
 }
 
 
+static int check_modes(
+  int given1[], const char *options1[],
+                       int given2[], const char *options2[])
+{
+  int i = 0, j = 0, errors = 0;
+  
+  while (given1[i] >= 0) {
+    if (given1[i]) {
+      while (given2[j] >= 0) {
+        if (given2[j]) {
+          ++errors;
+          fprintf(stderr, "%s: option %s conflicts with option %s\n",
+                  package_name, options1[i], options2[j]);
+        }
+        ++j;
+      }
+    }
+    ++i;
+  }
+  
+  return errors;
+}
+
 int
 cmdline_parser_internal (
   int argc, char **argv, struct gengetopt_args_info *args_info,
@@ -509,10 +551,12 @@ cmdline_parser_internal (
         { "btm-size",	1, NULL, 'b' },
         { "top-size",	1, NULL, 't' },
         { "membership",	1, NULL, 'm' },
+        { "sync-base",	1, NULL, 's' },
+        { "extract-base",	0, NULL, 'e' },
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "hVo:rb:t:m:", long_options, &option_index);
+      c = getopt_long (argc, argv, "hVo:rb:t:m:s:e", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -586,6 +630,30 @@ cmdline_parser_internal (
             goto failure;
         
           break;
+        case 's':	/* synchronize node base with the specified collection.  */
+          args_info->sync_mode_counter += 1;
+        
+        
+          if (update_arg( (void *)&(args_info->sync_base_arg), 
+               &(args_info->sync_base_orig), &(args_info->sync_base_given),
+              &(local_args_info.sync_base_given), optarg, 0, 0, ARG_STRING,
+              check_ambiguity, override, 0, 0,
+              "sync-base", 's',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'e':	/* do not merge levels, only extract the node base from the clusterings to the output.  */
+          args_info->exrtact_mode_counter += 1;
+        
+        
+          if (update_arg((void *)&(args_info->extract_base_flag), 0, &(args_info->extract_base_given),
+              &(local_args_info.extract_base_given), optarg, 0, 0, ARG_FLAG,
+              check_ambiguity, override, 1, 0, "extract-base", 'e',
+              additional_error))
+            goto failure;
+        
+          break;
 
         case 0:	/* Long option with no short option */
         case '?':	/* Invalid option.  */
@@ -600,6 +668,14 @@ cmdline_parser_internal (
 
 
 
+  if (args_info->exrtact_mode_counter && args_info->sync_mode_counter) {
+    int exrtact_given[] = {args_info->extract_base_given,  -1};
+    const char *exrtact_desc[] = {"--extract-base",  0};
+    int sync_given[] = {args_info->sync_base_given,  -1};
+    const char *sync_desc[] = {"--sync-base",  0};
+    error_occurred += check_modes(exrtact_given, exrtact_desc, sync_given, sync_desc);
+  }
+  
 
   cmdline_parser_release (&local_args_info);
 

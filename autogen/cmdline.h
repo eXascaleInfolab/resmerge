@@ -31,7 +31,7 @@ extern "C" {
 
 #ifndef CMDLINE_PARSER_VERSION
 /** @brief the program version */
-#define CMDLINE_PARSER_VERSION "1.0"
+#define CMDLINE_PARSER_VERSION "1.1"
 #endif
 
 /** @brief Where the command line options are stored */
@@ -53,6 +53,11 @@ struct gengetopt_args_info
   float membership_arg;	/**< @brief average expected membership of nodes in the clusters, > 0, typically >= 1 (default='1').  */
   char * membership_orig;	/**< @brief average expected membership of nodes in the clusters, > 0, typically >= 1 original value given at command line.  */
   const char *membership_help; /**< @brief average expected membership of nodes in the clusters, > 0, typically >= 1 help description.  */
+  char * sync_base_arg;	/**< @brief synchronize node base with the specified collection.  */
+  char * sync_base_orig;	/**< @brief synchronize node base with the specified collection original value given at command line.  */
+  const char *sync_base_help; /**< @brief synchronize node base with the specified collection help description.  */
+  int extract_base_flag;	/**< @brief do not merge levels, only extract the node base from the clusterings to the output (default=off).  */
+  const char *extract_base_help; /**< @brief do not merge levels, only extract the node base from the clusterings to the output help description.  */
   
   unsigned int help_given ;	/**< @brief Whether help was given.  */
   unsigned int version_given ;	/**< @brief Whether version was given.  */
@@ -61,9 +66,13 @@ struct gengetopt_args_info
   unsigned int btm_size_given ;	/**< @brief Whether btm-size was given.  */
   unsigned int top_size_given ;	/**< @brief Whether top-size was given.  */
   unsigned int membership_given ;	/**< @brief Whether membership was given.  */
+  unsigned int sync_base_given ;	/**< @brief Whether sync-base was given.  */
+  unsigned int extract_base_given ;	/**< @brief Whether extract-base was given.  */
 
   char **inputs ; /**< @brief unamed options (options without names) */
   unsigned inputs_num ; /**< @brief unamed options number */
+  int exrtact_mode_counter; /**< @brief Counter for mode exrtact */
+  int sync_mode_counter; /**< @brief Counter for mode sync */
 } ;
 
 /** @brief The additional parameters to pass to parser functions */

@@ -17,8 +17,6 @@
 
 #include <cstdio>  // FILE
 #include <string>
-#include <vector>
-//#include <fstream>
 #include <utility>  // move
 
 #ifdef INCLUDE_STL_FS
@@ -37,7 +35,6 @@
 
 
 using std::string;
-using std::vector;
 using std::move;
 
 constexpr char  PATHSEP =
@@ -376,6 +373,17 @@ Id estimateNodes(size_t size, float membership=1.f) noexcept;
 //! \return Id  - estimated number of clusters
 Id estimateClusters(Id ndsnum, float membership=1.f) noexcept;
 
+//! \brief Load node base (unique node ids) from the CNL file optionally
+//! 	filtering clusters by size
+//!
+//! \param file NamedFileWrapper&  - input collection of clusters in the CNL format
+//! \param membership=1.f float  - average membership of the node,
+//! 	> 0, typically ~= 1
+//! \param cmin=0 Id  - min allowed cluster size
+//! \param cmax=0 Id  - max allowed cluster size, 0 means any size
+//! \return UniqIds  - resulting node bae
+UniqIds loadNodes(NamedFileWrapper& file, float membership=1.f, Id cmin=0, Id cmax=0);
+
 // Interface functions ---------------------------------------------------------
 //! \brief Create output file if required
 //!
@@ -387,22 +395,41 @@ NamedFileWrapper createFile(const string& outpname, bool rewrite=false);
 
 //! \brief Open files corresponding to the specified entries
 //!
-//! \param names vector<const char*>&  - file or directory names
+//! \param names const FileNames&  - file or directory names
 //! \return NamedFileWrappers  - opened files
-NamedFileWrappers openFiles(vector<const char*>& names);
+NamedFileWrappers openFiles(const FileNames& names);
 
-//! \brief Merge collections of clusters filtering by size retaining unique clusters.
+//! \brief Merge collections of clusters filtering by size retaining unique clusters
+//! 	and optionally synchronizing with the node base (excluding non-listed nodes).
 //! 	Typically used to flatten a hierarchy or multiple resolutions.
 //! \note Clusters are unique respecting the order-independent members (node ids)
+//! \pre fout should be empty
 //!
 //! \param fout NamedFileWrapper&  - output file for the resulting collection
+//! \param files NamedFileWrappers&  - input collections
+//! \param fbase NamedFileWrapper&  - input node base for the synchronization,
+//! 	or an empty wrapper
+//! \param cmin=0 Id  - min allowed cluster size
+//! \param cmax=0 Id  - max allowed cluster size, 0 means any size
+//! \param membership=1.f float  - average membership of the node,
+//! 	> 0, typically ~= 1
+//! \return bool  - the processing is successful
+bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
+	, NamedFileWrapper& fbase, Id cmin=0, Id cmax=0
+	, float membership=1.f);
+
+//! \brief Extract the node base from the specified collections optionally
+//! 	prefiltering clusters by size
+//! \pre fout should be an empty
+//!
+//! \param fout NamedFileWrapper&  - output file for the resulting node base
 //! \param files NamedFileWrappers&  - input collections
 //! \param cmin=0 Id  - min allowed cluster size
 //! \param cmax=0 Id  - max allowed cluster size, 0 means any size
 //! \param membership=1.f float  - average membership of the node,
 //! 	> 0, typically ~= 1
-//! \return void
-void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
+//! \return bool  - the processing is successful
+bool extractBase(NamedFileWrapper& fout, NamedFileWrappers& files
 	, Id cmin=0, Id cmax=0, float membership=1.f);
 
 #endif // FILEIO_H

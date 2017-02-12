@@ -24,11 +24,11 @@ To update/extend the input parameters modify `args.ggo` and run `GenerateArgpars
 # Usage
 Execution Options:
 ```
-$ ./resmerge -h
-resmerge 1.0
+$ ./resmerge  -h
+resmerge 1.1
 
-Merges multiple clusterings on multiple resolutions into the single set of
-clusters with optional filtering.
+Merge multiple clusterings (resolution/hierarchy levels) with optional
+filtering of clusters by size and nodes filtering by base.
 
 Usage: resmerge [OPTIONS] clusterings
 
@@ -48,9 +48,34 @@ Usage: resmerge [OPTIONS] clusterings
                             (default=`0')
   -m, --membership=FLOAT  average expected membership of nodes in the clusters,
                             > 0, typically >= 1  (default=`1')
+
+ Mode: sync
+  Synchronize the node base of the merged clustering
+  -s, --sync-base=STRING  synchronize node base with the specified collection
+
+ Mode: exrtact
+  Exrtact the node base from the specified clustering(s)
+  -e, --extract-base      do not merge levels, only extract the node base from
+                            the clusterings to the output  (default=off)
+```
+
+**Examples**
+Merge clusterings (resolution levels) from the `<dirname>` to `<dirname>.cnl`:
+```
+$ ./resmerge  /opt/tests/tmp/resolutions
+```
+Extract node base to `<filename>_base.cnl`:
+```
+./resmerge -e  /opt/tests/collection.cnl
+```
+Merge clusterings, synchronize the node base and output resulting flattened hierarchy/levels to the specified file:
+```
+$ ./resmerge -s /opt/tests/levels_nodebase.cnl -o /opt/tests/flatlevs_synced.cnl /opt/tests/levels/ /opt/tests/level_extra.cnl
 ```
 
 # Related Projects
 - [GenConvNMI](https://github.com/eXascaleInfolab/GenConvNMI) - Overlapping NMI evaluation that is compatible with the original NMI and suitable for both overlapping and multi resolution (hierarchical) clustering evaluation.
 - [ExecTime](https://bitbucket.org/lumais/exectime/)  - A lightweight resource consumption profiler.
 - [PyCABeM](https://github.com/eXascaleInfolab/PyCABeM) - Python Benchmarking Framework for the Clustering Algorithms Evaluation. Uses extrinsic (NMIs) and intrinsic (Q) measures for the clusters quality evaluation considering overlaps (nodes membership by multiple clusters).
+
+**Note:** Please, [star this project](https://github.com/eXascaleInfolab/resmerge) if you use it.

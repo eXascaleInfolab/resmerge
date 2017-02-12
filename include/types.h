@@ -12,6 +12,7 @@
 #define TYPES_H
 
 #include <cstdint>
+#include <vector>
 #include <unordered_set>
 
 
@@ -50,6 +51,7 @@
 #endif // DEBUG
 #endif // HEAVY_VALIDATION
 
+using std::vector;
 using std::unordered_set;
 
 // Main types declarations -----------------------------------------------------
@@ -77,6 +79,9 @@ using UniqIds = unordered_set<Id>;
 ////! collision, it will not make any noticeable impact on th subsequent evaluation
 //using Clusters = unordered_map<size_t, unique_ptr<Cluster>>;
 
+//! Input file names
+using FileNames = vector<const char*>;
+
 // Internal types --------------------------------------------------------------
 //! \brief Aggregation hash of ids
 class AggHash {
@@ -103,6 +108,11 @@ public:
     //!
     //! \return size_t  - number of the aggregated ids
 	size_t size() const noexcept  { return m_size; }
+
+//    //! \brief The hash is empty
+//    //!
+//    //! \return bool  - the hash is empty
+//	bool empty() const noexcept  { return !m_size; }
 
     //! \brief Evaluate hash of the aggregation
     //!
