@@ -338,16 +338,14 @@ public:
 //! \return void
 void ensureDir(const string& dir);
 
-////! \brief
-////!
-////! \param fsm istream&
-////! \param line string&
-////! \param clsnum size_t&
-////! \param ndsnum size_t&
-////! \return void
-//void parseHeader(istream& fsm, string& line, size_t& clsnum, size_t& ndsnum);
+//! \brief Get file size
+//!
+//! \param file const NamedFileWrapper&  - target file
+//! \return size_t  - file size, -1 on error
+size_t fileSize(const NamedFileWrapper& file) noexcept;
 
-//! \brief  Parse the header of CNL file
+//! \brief  Parse the header of CNL file and validate the results
+//! \post clsnum <= ndsnum if ndsnum > 0. 0 means not specified
 //!
 //! \param fcls NamedFileWrapper&  - the reading file
 //! \param line StringBuffer&  - processing line (string, header) being read from the file
@@ -362,23 +360,15 @@ void parseHeader(NamedFileWrapper& fcls, StringBuffer& line, size_t& clsnum, siz
 //! \param membership=1.f float  - average membership of the node,
 //! 	> 0, typically ~= 1
 //! \return Id  - estimated number of nodes
-Id estimateNodes(size_t size, float membership=1.f);
+Id estimateNodes(size_t size, float membership=1.f) noexcept;
 
 //! \brief Estimate the number of clusters from the number of nodes
 //!
 //! \param ndsnum Id - the number of nodes
+//! \param membership=1.f float  - average membership of the node,
+//! 	> 0, typically ~= 1
 //! \return Id  - estimated number of clusters
-inline Id estimateClusters(Id ndsnum);
-
-////! \brief Estimate zeroized values
-////!
-////! \param cmsbytes size_t  - the number of bytes in the file, require to estimate
-////! 	the number of nodes
-////! \param ndsnum size_t&  - the estimated number of nodes if 0, otherwise omit it
-////! \param clsnum size_t&  - the estimated number of clusters if 0 and ndsnum is
-////! 	specified, otherwise omit it
-////! \return void
-//void estimateSizes(size_t cmsbytes, size_t& ndsnum, size_t& clsnum);
+Id estimateClusters(Id ndsnum, float membership=1.f) noexcept;
 
 // Interface functions ---------------------------------------------------------
 //! \brief Create output file if required
@@ -403,7 +393,10 @@ NamedFileWrappers openFiles(vector<const char*>& names);
 //! \param files NamedFileWrappers&  - input collections
 //! \param cmin=0 Id  - min allowed cluster size
 //! \param cmax=0 Id  - max allowed cluster size, 0 means any size
+//! \param membership=1.f float  - average membership of the node,
+//! 	> 0, typically ~= 1
 //! \return void
-void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin=0, Id cmax=0);
+void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
+	, Id cmin=0, Id cmax=0, float membership=1.f);
 
 #endif // FILEIO_H

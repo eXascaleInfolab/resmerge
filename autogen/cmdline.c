@@ -34,12 +34,13 @@ const char *gengetopt_args_info_versiontext = "";
 const char *gengetopt_args_info_description = "";
 
 const char *gengetopt_args_info_help[] = {
-  "  -h, --help           Print help and exit",
-  "  -V, --version        Print version and exit",
-  "  -b, --btm-size=LONG  bottom margin of the cluster size to process\n                         (default=`0')",
-  "  -t, --top-size=LONG  top margin of the cluster size to process  (default=`0')",
-  "  -r, --rewrite        rewrite already existing resulting file or skip the\n                         processing  (default=off)",
-  "  -o, --output=STRING  output file name. If a single directory <dirname> is\n                         specified then the default output file name is\n                         <dirname>.cnl  (default=`clusters.cnl')",
+  "  -h, --help              Print help and exit",
+  "  -V, --version           Print version and exit",
+  "  -o, --output=STRING     output file name. If a single directory <dirname> is\n                            specified then the default output file name is\n                            <dirname>.cnl  (default=`clusters.cnl')",
+  "  -r, --rewrite           rewrite already existing resulting file or skip the\n                            processing  (default=off)",
+  "  -b, --btm-size=LONG     bottom margin of the cluster size to process\n                            (default=`0')",
+  "  -t, --top-size=LONG     top margin of the cluster size to process\n                            (default=`0')",
+  "  -m, --membership=FLOAT  average expected membership of nodes in the clusters,\n                            > 0, typically >= 1  (default=`1')",
     0
 };
 
@@ -47,6 +48,7 @@ typedef enum {ARG_NO
   , ARG_FLAG
   , ARG_STRING
   , ARG_LONG
+  , ARG_FLOAT
 } cmdline_parser_arg_type;
 
 static
@@ -67,23 +69,26 @@ void clear_given (struct gengetopt_args_info *args_info)
 {
   args_info->help_given = 0 ;
   args_info->version_given = 0 ;
+  args_info->output_given = 0 ;
+  args_info->rewrite_given = 0 ;
   args_info->btm_size_given = 0 ;
   args_info->top_size_given = 0 ;
-  args_info->rewrite_given = 0 ;
-  args_info->output_given = 0 ;
+  args_info->membership_given = 0 ;
 }
 
 static
 void clear_args (struct gengetopt_args_info *args_info)
 {
   FIX_UNUSED (args_info);
+  args_info->output_arg = gengetopt_strdup ("clusters.cnl");
+  args_info->output_orig = NULL;
+  args_info->rewrite_flag = 0;
   args_info->btm_size_arg = 0;
   args_info->btm_size_orig = NULL;
   args_info->top_size_arg = 0;
   args_info->top_size_orig = NULL;
-  args_info->rewrite_flag = 0;
-  args_info->output_arg = gengetopt_strdup ("clusters.cnl");
-  args_info->output_orig = NULL;
+  args_info->membership_arg = 1;
+  args_info->membership_orig = NULL;
   
 }
 
@@ -94,10 +99,11 @@ void init_args_info(struct gengetopt_args_info *args_info)
 
   args_info->help_help = gengetopt_args_info_help[0] ;
   args_info->version_help = gengetopt_args_info_help[1] ;
-  args_info->btm_size_help = gengetopt_args_info_help[2] ;
-  args_info->top_size_help = gengetopt_args_info_help[3] ;
-  args_info->rewrite_help = gengetopt_args_info_help[4] ;
-  args_info->output_help = gengetopt_args_info_help[5] ;
+  args_info->output_help = gengetopt_args_info_help[2] ;
+  args_info->rewrite_help = gengetopt_args_info_help[3] ;
+  args_info->btm_size_help = gengetopt_args_info_help[4] ;
+  args_info->top_size_help = gengetopt_args_info_help[5] ;
+  args_info->membership_help = gengetopt_args_info_help[6] ;
   
 }
 
@@ -184,10 +190,11 @@ static void
 cmdline_parser_release (struct gengetopt_args_info *args_info)
 {
   unsigned int i;
-  free_string_field (&(args_info->btm_size_orig));
-  free_string_field (&(args_info->top_size_orig));
   free_string_field (&(args_info->output_arg));
   free_string_field (&(args_info->output_orig));
+  free_string_field (&(args_info->btm_size_orig));
+  free_string_field (&(args_info->top_size_orig));
+  free_string_field (&(args_info->membership_orig));
   
   
   for (i = 0; i < args_info->inputs_num; ++i)
@@ -227,14 +234,16 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "help", 0, 0 );
   if (args_info->version_given)
     write_into_file(outfile, "version", 0, 0 );
+  if (args_info->output_given)
+    write_into_file(outfile, "output", args_info->output_orig, 0);
+  if (args_info->rewrite_given)
+    write_into_file(outfile, "rewrite", 0, 0 );
   if (args_info->btm_size_given)
     write_into_file(outfile, "btm-size", args_info->btm_size_orig, 0);
   if (args_info->top_size_given)
     write_into_file(outfile, "top-size", args_info->top_size_orig, 0);
-  if (args_info->rewrite_given)
-    write_into_file(outfile, "rewrite", 0, 0 );
-  if (args_info->output_given)
-    write_into_file(outfile, "output", args_info->output_orig, 0);
+  if (args_info->membership_given)
+    write_into_file(outfile, "membership", args_info->membership_orig, 0);
   
 
   i = EXIT_SUCCESS;
@@ -407,6 +416,9 @@ int update_arg(void *field, char **orig_field,
   case ARG_LONG:
     if (val) *((long *)field) = (long)strtol (val, &stop_char, 0);
     break;
+  case ARG_FLOAT:
+    if (val) *((float *)field) = (float)strtod (val, &stop_char);
+    break;
   case ARG_STRING:
     if (val) {
       string_field = (char **)field;
@@ -422,6 +434,7 @@ int update_arg(void *field, char **orig_field,
   /* check numeric conversion */
   switch(arg_type) {
   case ARG_LONG:
+  case ARG_FLOAT:
     if (val && !(stop_char && *stop_char == '\0')) {
       fprintf(stderr, "%s: invalid numeric value: %s\n", package_name, val);
       return 1; /* failure */
@@ -491,14 +504,15 @@ cmdline_parser_internal (
       static struct option long_options[] = {
         { "help",	0, NULL, 'h' },
         { "version",	0, NULL, 'V' },
+        { "output",	1, NULL, 'o' },
+        { "rewrite",	0, NULL, 'r' },
         { "btm-size",	1, NULL, 'b' },
         { "top-size",	1, NULL, 't' },
-        { "rewrite",	0, NULL, 'r' },
-        { "output",	1, NULL, 'o' },
+        { "membership",	1, NULL, 'm' },
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "hVb:t:ro:", long_options, &option_index);
+      c = getopt_long (argc, argv, "hVo:rb:t:m:", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -514,6 +528,28 @@ cmdline_parser_internal (
           cmdline_parser_free (&local_args_info);
           exit (EXIT_SUCCESS);
 
+        case 'o':	/* output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl.  */
+        
+        
+          if (update_arg( (void *)&(args_info->output_arg), 
+               &(args_info->output_orig), &(args_info->output_given),
+              &(local_args_info.output_given), optarg, 0, "clusters.cnl", ARG_STRING,
+              check_ambiguity, override, 0, 0,
+              "output", 'o',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'r':	/* rewrite already existing resulting file or skip the processing.  */
+        
+        
+          if (update_arg((void *)&(args_info->rewrite_flag), 0, &(args_info->rewrite_given),
+              &(local_args_info.rewrite_given), optarg, 0, 0, ARG_FLAG,
+              check_ambiguity, override, 1, 0, "rewrite", 'r',
+              additional_error))
+            goto failure;
+        
+          break;
         case 'b':	/* bottom margin of the cluster size to process.  */
         
         
@@ -538,24 +574,14 @@ cmdline_parser_internal (
             goto failure;
         
           break;
-        case 'r':	/* rewrite already existing resulting file or skip the processing.  */
+        case 'm':	/* average expected membership of nodes in the clusters, > 0, typically >= 1.  */
         
         
-          if (update_arg((void *)&(args_info->rewrite_flag), 0, &(args_info->rewrite_given),
-              &(local_args_info.rewrite_given), optarg, 0, 0, ARG_FLAG,
-              check_ambiguity, override, 1, 0, "rewrite", 'r',
-              additional_error))
-            goto failure;
-        
-          break;
-        case 'o':	/* output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl.  */
-        
-        
-          if (update_arg( (void *)&(args_info->output_arg), 
-               &(args_info->output_orig), &(args_info->output_given),
-              &(local_args_info.output_given), optarg, 0, "clusters.cnl", ARG_STRING,
+          if (update_arg( (void *)&(args_info->membership_arg), 
+               &(args_info->membership_orig), &(args_info->membership_given),
+              &(local_args_info.membership_given), optarg, 0, "1", ARG_FLOAT,
               check_ambiguity, override, 0, 0,
-              "output", 'o',
+              "membership", 'm',
               additional_error))
             goto failure;
         

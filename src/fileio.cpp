@@ -195,10 +195,12 @@ void parseHeader(NamedFileWrapper& fcls, StringBuffer& line, size_t& clsnum, siz
 			}
 		} while((tok = strtok(nullptr, attrnameDelim)) && attrs < 2);
 
-		// Validate the parsed values
-		if(clsnum > ndsnum) {
+		// Validate and correct the number of clusters if required
+		// Note: it's better to reallocate a container a few times than too much overconsume the memory
+		if(ndsnum && clsnum > ndsnum) {
 			fprintf(stderr, "WARNING parseHeader(), clsnum (%lu) typically should be"
 				" less than ndsnum (%lu)\n", clsnum, ndsnum);
+			clsnum = ndsnum;
 			//assert(0 && "parseHeader(), clsnum typically should be less than ndsnum");
 		}
 		// Get following line for the unified subsequent processing
@@ -207,11 +209,43 @@ void parseHeader(NamedFileWrapper& fcls, StringBuffer& line, size_t& clsnum, siz
 	}
 }
 
-Id estimateNodes(size_t size, float membership)
+size_t fileSize(const NamedFileWrapper& file) noexcept
 {
-	if(membership <= 0)
-		throw invalid_argument("estimateNodes(), membership = "
-			+ to_string(membership) + " should be positive\n");
+	size_t  cmsbytes = -1;
+#ifdef __unix__  // sqrt(cmsbytes) lines => linebuf = max(4-8Kb, sqrt(cmsbytes) * 2) with dynamic realloc
+	struct stat  filest;
+	int fd = fileno(file);
+	if(fd != -1 && !fstat(fd, &filest))
+		return filest.st_size;
+#endif // __unix
+	error_code  err;
+	cmsbytes = fs::file_size(file.name(), err);
+	if(cmsbytes == size_t(-1))
+		fprintf(stderr, "WARNING fileSize(), file size evaluation failed: %s\n"
+			, err.message().c_str());
+
+//	// Get length of the file
+//	fseek(file, 0, SEEK_END);
+//	cmsbytes = ftell(file);  // The number of bytes in the input communities
+//	if(cmsbytes == size_t(-1))
+//		fprintf(stderr, "WARNING fileSize(), file size evaluation failed: %s\n"
+//			, strerror(errno));
+//	//fprintf(stderr, "  %s: %lu bytes\n", fname, cmsbytes);
+//	rewind(file);  // Set position to the begin of the file
+
+	return cmsbytes;
+}
+
+Id estimateNodes(size_t size, float membership) noexcept
+{
+	if(membership <= 0) {
+		fprintf(stderr, "WARNING estimateNodes(), invalid membership = %G specified"
+			", reseted to 1\n", membership);
+		membership = 1;
+		//throw invalid_argument("estimateNodes(), membership = "
+		//	+ to_string(membership) + " should be positive\n");
+	}
+
 	Id  ndsnum = 0;  // The estimated number of nodes
 	if(size) {
 		size_t  magn = 10;  // Decimal ids magnitude
@@ -227,13 +261,21 @@ Id estimateNodes(size_t size, float membership)
 	return ndsnum / membership;
 }
 
-Id estimateClusters(Id ndsnum)
+Id estimateClusters(Id ndsnum, float membership) noexcept
 {
+	if(membership <= 0) {
+		fprintf(stderr, "WARNING estimateClusters(), invalid membership = %G specified"
+			", reseted to 1\n", membership);
+		membership = 1;
+		//throw invalid_argument("estimateClusters(), membership = "
+		//	+ to_string(membership) + " should be positive\n");
+	}
+
 	Id  clsnum = 0;  // The estimated number of clusters
 	// Usually the number of clusters does not increase square root of the number of nodes
 	// Note: do not estimate in case the number of nodes is not specified
 	if(ndsnum)
-		clsnum = sqrt(ndsnum) + 1;  // Note: +1 to consider rounding down
+		clsnum = sqrt(ndsnum * membership) + 1;  // Note: +1 to consider rounding down
 	return clsnum;
 }
 
@@ -321,7 +363,8 @@ NamedFileWrappers openFiles(vector<const char*>& names)
 	return files;
 }
 
-void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin, Id cmax)
+void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
+, Id cmin, Id cmax, float membership)
 {
 	if(!fout)
 		return;
@@ -363,35 +406,19 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin,
 
 		// Parse header and read the number of clusters if specified
 		parseHeader(file, line, clsnum, ndsnum);
-		// Validate and correct the number of clusters if required
-		// Note: it's better to reallocate a few times than too much overconsume the memory
-		if(ndsnum && clsnum > ndsnum)
-			clsnum = ndsnum;
 
 		// Estimate the number of clusters in the file if not specified
 		if(!clsnum) {
-			size_t  cmsbytes = 0;
+			size_t  cmsbytes = -1;
 			if(!ndsnum) {
-#ifdef __unix__  // sqrt(cmsbytes) lines => linebuf = max(4-8Kb, sqrt(cmsbytes) * 2) with dynamic realloc
-				struct stat  filest;
-				int fd = fileno(file);
-				if(fd != -1 && !fstat(fd, &filest))
-					cmsbytes = filest.st_size;
-				//fprintf(stderr, "  %s: %lu bytes\n", fname, cmsbytes);
-#endif // __unix
-				// Get length of the file
-				if(!cmsbytes) {
-					fseek(file, 0, SEEK_END);
-					cmsbytes = ftell(file);  // The number of bytes in the input communities
-					rewind(file);  // Set position to the begin of the file
-				}
-				if(cmsbytes && cmsbytes != size_t(-1))  // File length fetching failed
-					ndsnum = estimateNodes(cmsbytes);
+				cmsbytes = fileSize(file);
+				if(cmsbytes != size_t(-1))  // File length fetching failed
+					ndsnum = estimateNodes(cmsbytes, membership);
 			}
-			clsnum = estimateClusters(ndsnum);
+			clsnum = estimateClusters(ndsnum, membership);
 #if TRACE >= 2
-			fprintf(stderr, "mergeCollections(), %lu bytes, %lu nodes (estimated: %u)"
-				", %lu clusters\n", cmsbytes, ndsnum, cmsbytes != 0, clsnum);
+			fprintf(stderr, "mergeCollections(), %lu nodes (estimated: %u)"
+				", %lu estimated clusters\n", ndsnum, cmsbytes != size_t(-1), clsnum);
 #endif // TRACE
 		} else {
 #if TRACE >= 2
@@ -399,7 +426,7 @@ void mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin,
 				, clsnum, ndsnum);
 #endif // TRACE
 			if(!ndsnum)
-				ndsnum = clsnum * clsnum;  // The expected number of nodes
+				ndsnum = clsnum * clsnum / membership;  // The expected number of nodes
 		}
 
 		// Preallocate space for the clusters hashes

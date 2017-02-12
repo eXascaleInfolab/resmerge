@@ -31,7 +31,7 @@ extern "C" {
 
 #ifndef CMDLINE_PARSER_VERSION
 /** @brief the program version */
-#define CMDLINE_PARSER_VERSION "0.1"
+#define CMDLINE_PARSER_VERSION "1.0"
 #endif
 
 /** @brief Where the command line options are stored */
@@ -39,24 +39,28 @@ struct gengetopt_args_info
 {
   const char *help_help; /**< @brief Print help and exit help description.  */
   const char *version_help; /**< @brief Print version and exit help description.  */
+  char * output_arg;	/**< @brief output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl (default='clusters.cnl').  */
+  char * output_orig;	/**< @brief output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl original value given at command line.  */
+  const char *output_help; /**< @brief output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl help description.  */
+  int rewrite_flag;	/**< @brief rewrite already existing resulting file or skip the processing (default=off).  */
+  const char *rewrite_help; /**< @brief rewrite already existing resulting file or skip the processing help description.  */
   long btm_size_arg;	/**< @brief bottom margin of the cluster size to process (default='0').  */
   char * btm_size_orig;	/**< @brief bottom margin of the cluster size to process original value given at command line.  */
   const char *btm_size_help; /**< @brief bottom margin of the cluster size to process help description.  */
   long top_size_arg;	/**< @brief top margin of the cluster size to process (default='0').  */
   char * top_size_orig;	/**< @brief top margin of the cluster size to process original value given at command line.  */
   const char *top_size_help; /**< @brief top margin of the cluster size to process help description.  */
-  int rewrite_flag;	/**< @brief rewrite already existing resulting file or skip the processing (default=off).  */
-  const char *rewrite_help; /**< @brief rewrite already existing resulting file or skip the processing help description.  */
-  char * output_arg;	/**< @brief output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl (default='clusters.cnl').  */
-  char * output_orig;	/**< @brief output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl original value given at command line.  */
-  const char *output_help; /**< @brief output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl help description.  */
+  float membership_arg;	/**< @brief average expected membership of nodes in the clusters, > 0, typically >= 1 (default='1').  */
+  char * membership_orig;	/**< @brief average expected membership of nodes in the clusters, > 0, typically >= 1 original value given at command line.  */
+  const char *membership_help; /**< @brief average expected membership of nodes in the clusters, > 0, typically >= 1 help description.  */
   
   unsigned int help_given ;	/**< @brief Whether help was given.  */
   unsigned int version_given ;	/**< @brief Whether version was given.  */
+  unsigned int output_given ;	/**< @brief Whether output was given.  */
+  unsigned int rewrite_given ;	/**< @brief Whether rewrite was given.  */
   unsigned int btm_size_given ;	/**< @brief Whether btm-size was given.  */
   unsigned int top_size_given ;	/**< @brief Whether top-size was given.  */
-  unsigned int rewrite_given ;	/**< @brief Whether rewrite was given.  */
-  unsigned int output_given ;	/**< @brief Whether output was given.  */
+  unsigned int membership_given ;	/**< @brief Whether membership was given.  */
 
   char **inputs ; /**< @brief unamed options (options without names) */
   unsigned inputs_num ; /**< @brief unamed options number */

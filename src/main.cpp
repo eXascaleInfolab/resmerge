@@ -58,7 +58,8 @@ int main(int argc, char **argv)
 	if(files.empty())
 		return 1;
 
-	mergeCollections(fout, files, args_info.btm_size_arg, args_info.top_size_arg);
+	mergeCollections(fout, files, args_info.btm_size_arg, args_info.top_size_arg
+		, args_info.membership_arg);
 	printf("%lu CNL files merged into %s\n", files.size(), outpname.c_str());
 
     return 0;
