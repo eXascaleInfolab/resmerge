@@ -355,9 +355,11 @@ NamedFileWrappers openFiles(vector<const char*>& names)
 			fprintf(stderr, "  %s\n", name);
 	}
 
+	if(files.empty())
+		fputs("WARNING openFiles(), the input data does not exist\n", stderr);
 #if TRACE >= 1
-	printf("openFiles(), opened %lu files from the %u files and %u dirs\n"
-		, files.size(), inpfiles, inpdirs);
+	else printf("openFiles(), opened %lu files from the %u files and %u dirs\n"
+			, files.size(), inpfiles, inpdirs);
 #endif // TRACE
 
 	return files;

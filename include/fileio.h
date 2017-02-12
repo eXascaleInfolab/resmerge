@@ -216,6 +216,7 @@ using NamedFileWrappers = vector<NamedFileWrapper>;
 using StringBufferBase = vector<char>;
 
 //! \brief String buffer to real file by lines using c-strings
+//! \note The last symbol in the string is always set to 0 automatically
 class StringBuffer: protected StringBufferBase {
 	constexpr static size_t  spagesize = 4096;  // Small page size on x64
 
@@ -233,6 +234,8 @@ public:
 			size = 2;
 		data()[0] = 0;  // Set first element to 0
 		data()[size-2] = 0;  // Set prelast element to 0
+		// Note: data()[size-1] is set to 0 automatically on file read if
+		// the reading data size >= size - 1 bytes
 	}
 
     //! \brief Reset the string and it's shrink the allocated buffer
@@ -248,9 +251,12 @@ public:
 		shrink_to_fit();  // Free reserved memory
 		data()[0] = 0;  // Set first element to 0
 		data()[size-2] = 0;  // Set prelast element to 0
+		// Note: data()[size-1] is set to 0 automatically on file read if
+		// the reading data size >= size - 1 bytes
 	}
 
     //! \brief Read line from the file and store including the terminating '\n' symbol
+    //! \attention The read string contains the trailing '\n' if exist in the file
     //!
     //! \param input FILE*  - processing file
     //! \return bool  - whether the following line available and the current one
