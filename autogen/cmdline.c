@@ -43,7 +43,7 @@ const char *gengetopt_args_info_help[] = {
   "  -m, --membership=FLOAT  average expected membership of the nodes in the\n                            clusters, > 0, typically >= 1  (default=`1')",
   "\n Mode: sync\n  Synchronize the node base of the merged clustering",
   "  -s, --sync-base=STRING  synchronize node base with the specified collection",
-  "\n Mode: exrtact\n  Exrtact the node base from the specified clustering(s)",
+  "\n Mode: exrtact\n  Extract the node base from the specified clustering(s)",
   "  -e, --extract-base      extract the node base from the clusterings instead of\n                            merging the clusterings  (default=off)",
     0
 };

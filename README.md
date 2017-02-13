@@ -24,7 +24,7 @@ To update/extend the input parameters modify `args.ggo` and run `GenerateArgpars
 # Usage
 Execution Options:
 ```
-$ ./resmerge  -h
+$ ./resmerge -h
 resmerge 1.1
 
 Merge multiple clusterings (resolution/hierarchy levels) with optional
@@ -46,17 +46,17 @@ Usage: resmerge [OPTIONS] clusterings
                             (default=`0')
   -t, --top-size=LONG     top margin of the cluster size to process
                             (default=`0')
-  -m, --membership=FLOAT  average expected membership of nodes in the clusters,
-                            > 0, typically >= 1  (default=`1')
+  -m, --membership=FLOAT  average expected membership of the nodes in the
+                            clusters, > 0, typically >= 1  (default=`1')
 
  Mode: sync
   Synchronize the node base of the merged clustering
   -s, --sync-base=STRING  synchronize node base with the specified collection
 
  Mode: exrtact
-  Exrtact the node base from the specified clustering(s)
-  -e, --extract-base      do not merge levels, only extract the node base from
-                            the clusterings to the output  (default=off)
+  Extract the node base from the specified clustering(s)
+  -e, --extract-base      extract the node base from the clusterings instead of
+                            merging the clusterings  (default=off)
 ```
 
 **Examples**
