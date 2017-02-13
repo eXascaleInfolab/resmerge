@@ -15,7 +15,6 @@
 
 
 using fs::is_directory;
-using fs::exists;
 
 int main(int argc, char **argv)
 {
