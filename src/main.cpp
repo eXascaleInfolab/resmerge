@@ -10,8 +10,7 @@
 
 #include <cassert>
 #include "cmdline.h"  // Arguments parsing
-#define INCLUDE_STL_FS
-#include "fileio.h"
+#include "interface.h"
 
 
 using fs::is_directory;

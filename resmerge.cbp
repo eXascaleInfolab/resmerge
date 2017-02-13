@@ -63,9 +63,9 @@
 		</Unit>
 		<Unit filename="autogen/cmdline.h" />
 		<Unit filename="include/fileio.h" />
-		<Unit filename="include/iotypes.h" />
-		<Unit filename="include/types.h" />
+		<Unit filename="include/interface.h" />
 		<Unit filename="src/fileio.cpp" />
+		<Unit filename="src/interface.cpp" />
 		<Unit filename="src/main.cpp" />
 		<Extensions>
 			<DoxyBlocks>
