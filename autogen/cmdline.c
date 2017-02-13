@@ -40,11 +40,11 @@ const char *gengetopt_args_info_help[] = {
   "  -r, --rewrite           rewrite already existing resulting file or skip the\n                            processing  (default=off)",
   "  -b, --btm-size=LONG     bottom margin of the cluster size to process\n                            (default=`0')",
   "  -t, --top-size=LONG     top margin of the cluster size to process\n                            (default=`0')",
-  "  -m, --membership=FLOAT  average expected membership of nodes in the clusters,\n                            > 0, typically >= 1  (default=`1')",
+  "  -m, --membership=FLOAT  average expected membership of the nodes in the\n                            clusters, > 0, typically >= 1  (default=`1')",
   "\n Mode: sync\n  Synchronize the node base of the merged clustering",
   "  -s, --sync-base=STRING  synchronize node base with the specified collection",
   "\n Mode: exrtact\n  Exrtact the node base from the specified clustering(s)",
-  "  -e, --extract-base      do not merge levels, only extract the node base from\n                            the clusterings to the output  (default=off)",
+  "  -e, --extract-base      extract the node base from the clusterings instead of\n                            merging the clusterings  (default=off)",
     0
 };
 
@@ -618,7 +618,7 @@ cmdline_parser_internal (
             goto failure;
         
           break;
-        case 'm':	/* average expected membership of nodes in the clusters, > 0, typically >= 1.  */
+        case 'm':	/* average expected membership of the nodes in the clusters, > 0, typically >= 1.  */
         
         
           if (update_arg( (void *)&(args_info->membership_arg), 
@@ -643,7 +643,7 @@ cmdline_parser_internal (
             goto failure;
         
           break;
-        case 'e':	/* do not merge levels, only extract the node base from the clusterings to the output.  */
+        case 'e':	/* extract the node base from the clusterings instead of merging the clusterings.  */
           args_info->exrtact_mode_counter += 1;
         
         

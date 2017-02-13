@@ -17,9 +17,9 @@ option  "output" o  "output file name. If a single directory <dirname> is specif
 option  "rewrite" r  "rewrite already existing resulting file or skip the processing"  flag off
 option  "btm-size" b  "bottom margin of the cluster size to process"  long default="0"
 option  "top-size" t  "top margin of the cluster size to process"  long default="0"
-option  "membership" m  "average expected membership of nodes in the clusters, > 0, typically >= 1"  float default="1"
+option  "membership" m  "average expected membership of the nodes in the clusters, > 0, typically >= 1"  float default="1"
 modeoption  "sync-base" s  "synchronize node base with the specified collection"  string  mode="sync"
-modeoption  "extract-base" e  "do not merge levels, only extract the node base from the clusterings to the output"  flag off  mode="exrtact"
+modeoption  "extract-base" e  "extract the node base from the clusterings instead of merging the clusterings"  flag off  mode="exrtact"
 
 #defgroup "mode"  groupdesc="Whether to merge resolution/hierarchy levels with optional filtering of clusters by size and nodes by base, or just extract the node base"
 #option  "extract-base" e  "extract node base from the synchronizing collection to the specified file the same format"  string

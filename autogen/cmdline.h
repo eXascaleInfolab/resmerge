@@ -50,14 +50,14 @@ struct gengetopt_args_info
   long top_size_arg;	/**< @brief top margin of the cluster size to process (default='0').  */
   char * top_size_orig;	/**< @brief top margin of the cluster size to process original value given at command line.  */
   const char *top_size_help; /**< @brief top margin of the cluster size to process help description.  */
-  float membership_arg;	/**< @brief average expected membership of nodes in the clusters, > 0, typically >= 1 (default='1').  */
-  char * membership_orig;	/**< @brief average expected membership of nodes in the clusters, > 0, typically >= 1 original value given at command line.  */
-  const char *membership_help; /**< @brief average expected membership of nodes in the clusters, > 0, typically >= 1 help description.  */
+  float membership_arg;	/**< @brief average expected membership of the nodes in the clusters, > 0, typically >= 1 (default='1').  */
+  char * membership_orig;	/**< @brief average expected membership of the nodes in the clusters, > 0, typically >= 1 original value given at command line.  */
+  const char *membership_help; /**< @brief average expected membership of the nodes in the clusters, > 0, typically >= 1 help description.  */
   char * sync_base_arg;	/**< @brief synchronize node base with the specified collection.  */
   char * sync_base_orig;	/**< @brief synchronize node base with the specified collection original value given at command line.  */
   const char *sync_base_help; /**< @brief synchronize node base with the specified collection help description.  */
-  int extract_base_flag;	/**< @brief do not merge levels, only extract the node base from the clusterings to the output (default=off).  */
-  const char *extract_base_help; /**< @brief do not merge levels, only extract the node base from the clusterings to the output help description.  */
+  int extract_base_flag;	/**< @brief extract the node base from the clusterings instead of merging the clusterings (default=off).  */
+  const char *extract_base_help; /**< @brief extract the node base from the clusterings instead of merging the clusterings help description.  */
   
   unsigned int help_given ;	/**< @brief Whether help was given.  */
   unsigned int version_given ;	/**< @brief Whether version was given.  */
