@@ -10,6 +10,7 @@
 
 #include <cassert>
 #include "cmdline.h"  // Arguments parsing
+#include "macrodef.h"
 #include "interface.h"
 
 

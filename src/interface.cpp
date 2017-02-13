@@ -37,12 +37,12 @@ UniqIds loadNodes(NamedFileWrapper& file, float membership, Id cmin, Id cmax)
 	// Note: strings defined out of the cycle to avoid reallocations
 	StringBuffer  line;  // Reading line
 	// Parse header and read the number of clusters if specified
-	parseHeader(file, line, clsnum, ndsnum);
+	parseCnlHeader(file, line, clsnum, ndsnum);
 
 	// Estimate the number of nodes in the file if not specified
 	if(!ndsnum) {
 		if(!clsnum) {
-			size_t  cmsbytes = fileSize(file);
+			size_t  cmsbytes = file.size();
 			if(cmsbytes != size_t(-1))  // File length fetching failed
 				ndsnum = estimateNodes(cmsbytes, membership);
 		} else ndsnum = clsnum * clsnum / membership;  // The expected number of nodes
@@ -220,7 +220,7 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 	}
 	// Validate the fout is empty
 	{
-		size_t  fosize = fileSize(fout);
+		size_t  fosize = fout.size();
 		if(fosize && fosize != size_t(-1)) {
 			fputs("ERROR extractBase(), the output file should be empty\n", stderr);
 			return false;
@@ -269,13 +269,13 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 		size_t  ndsnum = 0;  // The number of nodes
 
 		// Parse header and read the number of clusters if specified
-		parseHeader(file, line, clsnum, ndsnum);
+		parseCnlHeader(file, line, clsnum, ndsnum);
 
 		// Estimate the number of clusters in the file if not specified
 		if(!clsnum) {
 			size_t  cmsbytes = -1;
 			if(!ndsnum) {
-				cmsbytes = fileSize(file);
+				cmsbytes = file.size();
 				if(cmsbytes != size_t(-1))  // File length fetching failed
 					ndsnum = estimateNodes(cmsbytes, membership);
 			}
@@ -427,7 +427,7 @@ bool extractBase(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin, Id c
 	}
 	// Validate the fout is empty
 	{
-		size_t  fosize = fileSize(fout);
+		size_t  fosize = fout.size();
 		if(fosize && fosize != size_t(-1)) {
 			fputs("ERROR extractBase(), the output file should be empty\n", stderr);
 			return false;
@@ -463,12 +463,12 @@ bool extractBase(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin, Id c
 		size_t  ndsnum = 0;  // The number of nodes
 
 		// Parse header and read the number of clusters if specified
-		parseHeader(file, line, clsnum, ndsnum);
+		parseCnlHeader(file, line, clsnum, ndsnum);
 
 		// Estimate the number of nodes in the file if not specified
 		if(!ndsnum) {
 			if(!clsnum) {
-				size_t  cmsbytes = fileSize(file);
+				size_t  cmsbytes = file.size();
 				if(cmsbytes != size_t(-1))  // File length fetching failed
 					ndsnum = estimateNodes(cmsbytes, membership);
 			} else ndsnum = clsnum * clsnum / membership;  // The expected number of nodes
