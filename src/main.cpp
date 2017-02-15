@@ -69,9 +69,9 @@ int main(int argc, char **argv)
 		auto files = openFiles({args_info.sync_base_arg});
 		if(files.empty())
 			return 1;
-#if HEAVY_VALIDATION >= 2
+#if VALIDATE >= 2
 		assert(files.size() == 1 && "a single node base file is expected");
-#endif // HEAVY_VALIDATION
+#endif // VALIDATE
 		fbase = move(files.front());
 	}
 

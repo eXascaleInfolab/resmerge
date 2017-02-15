@@ -22,6 +22,26 @@ using fs::exists;
 using fs::is_directory;
 using fs::directory_iterator;
 
+// Accessory types definitions -------------------------------------------------
+void AggHash::add(Id id) noexcept
+{
+	++m_size;
+	m_idsum += id;
+	m_id2sum += id * id;
+}
+
+void AggHash::clear() noexcept
+{
+	m_size = 0;
+	m_idsum = 0;
+	m_id2sum = 0;
+}
+
+size_t AggHash::hash() const
+{
+	return std::hash<string>()(string(reinterpret_cast<const char*>(this), sizeof *this));
+}
+
 // Accessory functions definitions ---------------------------------------------
 UniqIds loadNodes(NamedFileWrapper& file, float membership, Id cmin, Id cmax)
 {
@@ -44,7 +64,7 @@ UniqIds loadNodes(NamedFileWrapper& file, float membership, Id cmin, Id cmax)
 		if(!clsnum) {
 			size_t  cmsbytes = file.size();
 			if(cmsbytes != size_t(-1))  // File length fetching failed
-				ndsnum = estimateNodes(cmsbytes, membership);
+				ndsnum = estimateCnlNodes(cmsbytes, membership);
 		} else ndsnum = clsnum * clsnum / membership;  // The expected number of nodes
 #if TRACE >= 2
 		fprintf(stderr, "loadNodes(), estimated %lu nodes\n", ndsnum);
@@ -90,13 +110,13 @@ UniqIds loadNodes(NamedFileWrapper& file, float membership, Id cmin, Id cmax)
 			// In the latter case abs diff of shares instead of co occurrence
 			// counting should be performed.
 			Id  nid = strtoul(tok, nullptr, 10);
-#if HEAVY_VALIDATION >= 2
+#if VALIDATE >= 2
 			if(!nid && tok[0] != '0') {
 				fprintf(stderr, "WARNING loadNodes(), conversion error of '%s' into 0: %s\n"
 					, tok, strerror(errno));
 				continue;
 			}
-#endif // HEAVY_VALIDATION
+#endif // VALIDATE
 #if TRACE >= 2
 			++totmbs;  // Update the total number of read members
 #endif // TRACE
@@ -277,7 +297,7 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 			if(!ndsnum) {
 				cmsbytes = file.size();
 				if(cmsbytes != size_t(-1))  // File length fetching failed
-					ndsnum = estimateNodes(cmsbytes, membership);
+					ndsnum = estimateCnlNodes(cmsbytes, membership);
 			}
 			clsnum = estimateClusters(ndsnum, membership);
 #if TRACE >= 2
@@ -330,13 +350,13 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 				// In the latter case abs diff of shares instead of co occurrence
 				// counting should be performed.
 				Id  nid = strtoul(tok, nullptr, 10);
-#if HEAVY_VALIDATION >= 2
+#if VALIDATE >= 2
 				if(!nid && tok[0] != '0') {
 					fprintf(stderr, "WARNING mergeCollections(), conversion error of '%s' into 0: %s\n"
 						, tok, strerror(errno));
 					continue;
 				}
-#endif // HEAVY_VALIDATION
+#endif // VALIDATE
 #if TRACE >= 2
 				++totmbs;  // Update the total number of read members
 #endif // TRACE
@@ -361,10 +381,10 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 
 			// Filter read cluster by size
 			if(cnds.empty()) {
-#if HEAVY_VALIDATION >= 2
+#if VALIDATE >= 2
 				assert(!agghash.size() && clstr.empty()
 					&& "mergeCollections(), asynchronous internal containers");
-#endif // HEAVY_VALIDATION
+#endif // VALIDATE
 				continue;
 			}
 			if(cnds.size() >= cmin && (!cmax || cnds.size() <= cmax)) {
@@ -470,7 +490,7 @@ bool extractBase(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin, Id c
 			if(!clsnum) {
 				size_t  cmsbytes = file.size();
 				if(cmsbytes != size_t(-1))  // File length fetching failed
-					ndsnum = estimateNodes(cmsbytes, membership);
+					ndsnum = estimateCnlNodes(cmsbytes, membership);
 			} else ndsnum = clsnum * clsnum / membership;  // The expected number of nodes
 #if TRACE >= 2
 			fprintf(stderr, "extractBase(), estimated %lu nodes\n", ndsnum);
@@ -514,13 +534,13 @@ bool extractBase(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin, Id c
 				// In the latter case abs diff of shares instead of co occurrence
 				// counting should be performed.
 				Id  nid = strtoul(tok, nullptr, 10);
-#if HEAVY_VALIDATION >= 2
+#if VALIDATE >= 2
 				if(!nid && tok[0] != '0') {
 					fprintf(stderr, "WARNING extractBase(), conversion error of '%s' into 0: %s\n"
 						, tok, strerror(errno));
 					continue;
 				}
-#endif // HEAVY_VALIDATION
+#endif // VALIDATE
 #if TRACE >= 2
 				++totmbs;  // Update the total number of read members
 #endif // TRACE
