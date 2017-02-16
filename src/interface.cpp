@@ -144,7 +144,7 @@ UniqIds loadNodes(NamedFileWrapper& file, float membership, Id cmin, Id cmax)
 #if TRACE >= 2
 	printf("loadNodes(). the loaded base has %lu nodes from the input %lu members and %lu clusters\n"
 		, nodebase.size(), totmbs, fclsnum);
-#else
+#elif TRACE >= 1
 	printf("The loaded nodebase: %lu\n", nodebase.size());
 #endif // TRACE
 
