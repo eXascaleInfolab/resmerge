@@ -13,6 +13,7 @@
 #include <cmath>  // sqrt
 #include <cassert>
 #include <system_error>  // error_code
+//#include <stdexcept>
 
 #ifdef __unix__
 #include <sys/stat.h>
@@ -30,11 +31,12 @@ using fs::create_directories;
 using fs::is_directory;
 using fs::exists;
 using fs::status;
+using std::logic_error;
 
 // File IO Types definitions ---------------------------------------------------
 size_t NamedFileWrapper::size() const noexcept
 {
-	size_t  cmsbytes = -1;
+	size_t  cmsbytes = -1;  // Return -1 on error
 #ifdef __unix__  // sqrt(cmsbytes) lines => linebuf = max(4-8Kb, sqrt(cmsbytes) * 2) with dynamic realloc
 	struct stat  filest;
 	int fd = fileno(m_file);
@@ -58,11 +60,45 @@ size_t NamedFileWrapper::size() const noexcept
 	return cmsbytes;
 }
 
+//size_t StringBuffer::length() const
+//#if VALIDATE < 2
+//	noexcept
+//#endif // VALIDATE
+//{
+//#if VALIDATE >= 2
+//	const auto slen = strlen(data());
+//	if(m_length != slen) {
+//#if TRACE >= 2
+//		fprintf(stderr, "length(), string: %s\n", data());
+//#endif // TRACE
+//		throw logic_error("ERROR length(), m_length (" + to_string(m_length)
+//			+ ") != actual string length (" + to_string(slen) + ")\n");
+//	}
+//#endif // VALIDATE
+//	return m_length;
+//}
+
+bool StringBuffer::empty() const
+#if VALIDATE < 2
+	noexcept
+#endif // VALIDATE
+{
+#if VALIDATE >= 2
+	if((!front() || front() == '\n') && m_length >= 2)
+		throw logic_error("ERROR empty(), m_length (" + to_string(m_length)
+			+ ") != actual string length (" + to_string(int(front() != 0)) + ")\n");
+#endif // VALIDATE
+	return !front() || front() == '\n';
+}
+
 bool StringBuffer::readline(FILE* input)
 {
 #if VALIDATE >= 2
-	assert(input && "readline(), valid file stream should be specified");
+	assert(input && !m_cur
+		&& "readline(), valid file stream should be specified and have initial m_cur = 0");
 #endif // VALIDATE
+	*data() = 0;  // Set first element to 0 as an initialization to have the empty string on errors
+	const auto ibeg = ftell(input);
 	// Read data from file until the string is read or an error occurs
 	while(fgets(data() + m_cur, size() - m_cur, input) && data()[size()-2]) {
 #if TRACE >= 3  // Verified
@@ -73,11 +109,22 @@ bool StringBuffer::readline(FILE* input)
 		resize(size() + (size() / (spagesize * 2) + 1) * spagesize);
 		data()[size() - 2] = 0;  // Set prelast element to 0
 	}
+	const auto iend = ftell(input);
 #if VALIDATE >= 2
-	assert((!m_cur || strlen(data()) >= m_cur) && "readline(), string size validation failed");
+	if(iend == -1 || ibeg == -1)
+		perror("ERROR, file position reading error");
+	const size_t  slen = strlen(data());
+	if(!((!m_cur || slen >= m_cur) && size_t(iend - ibeg) == slen)) {
+		fprintf(stderr, "readline(), m_cur: %lu, slen: %lu, dpos: %li,  str: %s\n"
+			, m_cur, slen, iend - ibeg, data());
+		assert(0 && "readline(), string size validation failed");
+	}
 #endif // VALIDATE
 	m_cur = 0;  // Reset the writing (appending) position
 	// Note: prelast and last elements of the buffer will be always zero
+
+	// Set string length
+	m_length = iend != -1 && ibeg != -1 ? iend - ibeg : strlen(data());
 
 	// Check for errors
 	if(feof(input) || ferror(input)) {
@@ -116,10 +163,12 @@ void parseCnlHeader(NamedFileWrapper& fcls, StringBuffer& line, size_t& clsnum, 
 		//errno = 0;
 		const auto val = strtoul(tok, nullptr, 10);
 		if(errno)
-			perror("WARNING parseCount(), id value parsing error");
+			perror(string("WARNING parseCount(), id value parsing error for the tok '")
+				.append(tok).append("'").c_str());
 		return val;
 	};
 
+	errno = 0;  // Reset errno
 	// Process the header, which is a special initial comment
 	// The target header is:  # Clusters: <cls_num>[,] Nodes: <cls_num>
 	constexpr char  clsmark[] = "clusters";
@@ -148,9 +197,15 @@ void parseCnlHeader(NamedFileWrapper& fcls, StringBuffer& line, size_t& clsnum, 
 			if(!strcmp(tok, clsmark)) {
 				clsnum = parseCount();
 				++attrs;
+#if TRACE >= 2
+				fprintf(stderr, "parseCnlHeader(), clusters: %lu\n", clsnum);
+#endif // TRACE
 			} else if(!strcmp(tok, ndsmark)) {
 				ndsnum = parseCount();
 				++attrs;
+#if TRACE >= 2
+				fprintf(stderr, "parseCnlHeader(), nodes: %lu\n", ndsnum);
+#endif // TRACE
 			} else {
 				fprintf(stderr, "WARNING parseCnlHeader(), the header parsing is omitted"
 					" because of the unexpected attribute: %s\n", tok);

@@ -42,6 +42,12 @@ size_t AggHash::hash() const
 	return std::hash<string>()(string(reinterpret_cast<const char*>(this), sizeof *this));
 }
 
+//bool Cluster::operator<(const Cluster& cl) const noexcept
+//{
+//	return m_members.size() < cl.m_members.size() || (m_members.size() == cl.m_members.size()
+//		&& (m_sum < cl.m_sum || (m_sum == cl.m_sum && m_sum2 < cl.m_sum2)));
+//}
+
 // Accessory functions definitions ---------------------------------------------
 UniqIds loadNodes(NamedFileWrapper& file, float membership, Id cmin, Id cmax)
 {

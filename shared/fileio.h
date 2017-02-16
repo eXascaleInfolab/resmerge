@@ -214,6 +214,7 @@ class StringBuffer: protected StringBufferBase {
 	constexpr static size_t  spagesize = 4096;  // Small page size on x64
 
 	size_t  m_cur;  //! Current position for the writing
+	size_t  m_length;  //! Current length of the holding c-string
 //protected:
 //	StringBufferBase::size();
 public:
@@ -221,12 +222,13 @@ public:
     //! \post the allocated buffer will have size >= 2
     //!
     //! \param size=spagesize size_t  - size of the buffer
-	StringBuffer(size_t size=spagesize): StringBufferBase(size), m_cur(0)
+    // Note: can throw bad_alloc
+	StringBuffer(size_t size=spagesize): StringBufferBase(size), m_cur(0), m_length(0)
 	{
 		if(size <= 2)
 			size = 2;
-		data()[0] = 0;  // Set first element to 0
-		data()[size-2] = 0;  // Set prelast element to 0
+		*data() = 0;  // Set first element to 0
+		data()[size-2] = 0;  // Set prelast reserved element to 0
 		// Note: data()[size-1] is set to 0 automatically on file read if
 		// the reading data size >= size - 1 bytes
 	}
@@ -239,27 +241,31 @@ public:
 	{
 		// Reset writing position
 		m_cur = 0;
+		m_length = 0;
 		// Reset the buffer
-		resize(size);
+		resize(size);  // Note: can throw bad_alloc
 		shrink_to_fit();  // Free reserved memory
-		data()[0] = 0;  // Set first element to 0
-		data()[size-2] = 0;  // Set prelast element to 0
+		*data() = 0;  // Set first element to 0
+		data()[size-2] = 0;  // Set prelast reserved element to 0
 		// Note: data()[size-1] is set to 0 automatically on file read if
 		// the reading data size >= size - 1 bytes
 	}
 
-    //! \brief Read line from the file and store including the terminating '\n' symbol
-    //! \attention The read string contains the trailing '\n' if exist in the file
+    //! \brief Length of the string including the terminating '\n' if present,
+    //! 	but without the terminating '0'
     //!
-    //! \param input FILE*  - processing file
-    //! \return bool  - whether the following line available and the current one
-    //! 	is read without any errors
-	bool readline(FILE* input);
+    //! \return size_t  - length of the holding c-string without the null terminator
+	size_t length() const noexcept  { return m_length; }
 
-    //! \brief whether the string is empty
+    //! \brief Whether the string is empty or starts with the newline symbol
+    //! \attention empty() is true for '\n' when length() == 1
     //!
-    //! \return bool  - the line is empty
-	bool empty() const  { return !front() || front() == '\n'; }
+    //! \return bool  - the string is empty or starts with the '\n'
+	bool empty() const
+#if VALIDATE < 2
+		noexcept
+#endif // VALIDATE
+	;
 
     //! \brief C-string including '\n' if it was present in the file
 	operator char*() noexcept  { return data(); }
@@ -270,6 +276,14 @@ public:
     //! \brief Make public indexing operators
 	using StringBufferBase::operator[];
 	using StringBufferBase::at;
+
+    //! \brief Read line from the file and store including the terminating '\n' symbol
+    //! \attention The read string contains the trailing '\n' if exist in the file
+    //!
+    //! \param input FILE*  - processing file
+    //! \return bool  - whether the following line available and the current one
+    //! 	is read without any errors
+	bool readline(FILE* input);
 };
 
 //// Accessory Functions ---------------------------------------------------------
@@ -351,18 +365,6 @@ void parseCnlHeader(NamedFileWrapper& fcls, StringBuffer& line, size_t& clsnum, 
 //! 	> 0, typically ~= 1
 //! \return size_t  - estimated number of nodes
 size_t estimateCnlNodes(size_t filesize, float membership=1.f) noexcept;
-
-//float avgNodeChars(size_t filesize, size_t ndsnum) noexcept;
-//
-////! \brief Estimate the number of nodes from the CNL file size
-////!
-////! \param filesize size_t  - the number of bytes in the CNL file
-////! \param nidsize float  - average size of the node id in chars in the string
-////! 	including spaces
-////! \param membership=1.f float  - average membership of the node,
-////! 	> 0, typically ~= 1
-////! \return size_t  - estimated number of nodes
-//size_t estimateStringNodes(size_t strsize, float nidsize, float membership=1.f) noexcept;
 
 //! \brief Estimate the number of clusters from the number of nodes
 //!

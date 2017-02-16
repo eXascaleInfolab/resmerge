@@ -10,8 +10,8 @@ usage "resmerge [OPTIONS] clusterings
 
   clusterings  - clusterings specified by the given files and directories (non-recursive traversing)"
 
-defmode "sync"  modedesc="Synchronize the node base of the merged clustering"
-defmode "exrtact"  modedesc="Extract the node base from the specified clustering(s)"
+defmode  "sync"  modedesc="Synchronize the node base of the merged clustering"
+defmode  "exrtact"  modedesc="Extract the node base from the specified clustering(s)"
 
 option  "output" o  "output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl"  string default="clusters.cnl"
 option  "rewrite" r  "rewrite already existing resulting file or skip the processing"  flag off
