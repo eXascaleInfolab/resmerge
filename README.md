@@ -15,7 +15,9 @@ Merges multiple cluster resolution / hierarchy levels into the single collection
 ## Dependencies
 There no any dependencies for the execution or compilation.  
 However, to extend the input options and automatically regenerate the input parsing,
-[*gengetopt*](https://www.gnu.org/software/gengetopt) application should be installed: `$ sudo apt-get install gengetopt`.
+[*gengetopt*](https://www.gnu.org/software/gengetopt) application should be installed: `$ sudo apt-get install gengetopt`.  
+For the *prebuilt executables*:
+- libstdc++6 (stdc++fs): `$ sudo apt-get install libstdc++6`
 
 ## Compilation
 Just execute `$ make`.  

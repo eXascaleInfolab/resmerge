@@ -10,15 +10,16 @@ usage "resmerge [OPTIONS] clusterings
 
   clusterings  - clusterings specified by the given files and directories (non-recursive traversing)"
 
-defmode  "sync"  modedesc="Synchronize the node base of the merged clustering"
-defmode  "exrtact"  modedesc="Extract the node base from the specified clustering(s)"
-
 option  "output" o  "output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl"  string default="clusters.cnl"
 option  "rewrite" r  "rewrite already existing resulting file or skip the processing"  flag off
 option  "btm-size" b  "bottom margin of the cluster size to process"  long default="0"
 option  "top-size" t  "top margin of the cluster size to process"  long default="0"
 option  "membership" m  "average expected membership of the nodes in the clusters, > 0, typically >= 1"  float default="1"
+
+defmode  "sync"  modedesc="Synchronize the node base of the merged clustering"
 modeoption  "sync-base" s  "synchronize node base with the specified collection"  string  mode="sync"
+
+defmode  "exrtact"  modedesc="Extract the node base from the specified clustering(s)"
 modeoption  "extract-base" e  "extract the node base from the clusterings instead of merging the clusterings"  flag off  mode="exrtact"
 
 #defgroup "mode"  groupdesc="Whether to merge resolution/hierarchy levels with optional filtering of clusters by size and nodes by base, or just extract the node base"
