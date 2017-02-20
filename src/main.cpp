@@ -30,9 +30,12 @@ int main(int argc, char **argv)
 	}
 
 	// Get output file name
-	string  outpname = args_info.output_arg;
+	string  outpname = args_info.output_arg;  // Default output name
 	{
 		string  name = string(args_info.inputs[0]);  // Name of the first entry
+		// Remove trailing '/', '\\'
+		while(name.size() && name.back() == PATHSEP)
+			name.pop_back();
 		// Update default output filename in case single dir is specified
 		if(!args_info.output_given && args_info.inputs_num == 1) {
 			if(is_directory(name)
@@ -40,15 +43,11 @@ int main(int argc, char **argv)
 			&& name != "." && name != "..")
 				outpname = name + (args_info.extract_base_flag ? "_base.cnl" : ".cnl");
 			else if(args_info.extract_base_flag) {
+				auto isep = name.find_last_of("./\\");
+				if(isep != string::npos && name[isep] == '.')
+					name.insert(isep, "_base");
+				else name += "_base.cnl";
 				outpname = name;
-				auto isep = outpname.find_last_of("./\\");
-				if(isep != string::npos && outpname[isep] == '.') {
-					outpname.insert(isep, "_base");
-				} else {
-					if(isep != string::npos)
-						outpname.pop_back();  // Delete the trailing slash
-					outpname += "_base.cnl";
-				}
 			}
 		}
 	}
