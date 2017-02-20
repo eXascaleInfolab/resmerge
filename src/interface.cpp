@@ -67,11 +67,11 @@ UniqIds loadNodes(NamedFileWrapper& file, float membership, Id cmin, Id cmax)
 
 	// Estimate the number of nodes in the file if not specified
 	if(!ndsnum) {
-		if(!clsnum) {
-			size_t  cmsbytes = file.size();
-			if(cmsbytes != size_t(-1))  // File length fetching failed
-				ndsnum = estimateCnlNodes(cmsbytes, membership);
-		} else ndsnum = clsnum * clsnum / membership;  // The expected number of nodes
+		size_t  cmsbytes = file.size();
+		if(cmsbytes != size_t(-1))  // File length fetching failed
+			ndsnum = estimateCnlNodes(cmsbytes, membership);
+		else if(clsnum)
+			ndsnum = 2 * clsnum; // / membership;  // Note: use optimistic estimate instead of pessimistic (square / membership) to not overuse the memory
 #if TRACE >= 2
 		fprintf(stderr, "loadNodes(), estimated %lu nodes\n", ndsnum);
 #endif // TRACE
@@ -297,26 +297,30 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 		// Parse header and read the number of clusters if specified
 		parseCnlHeader(file, line, clsnum, ndsnum);
 
-		// Estimate the number of clusters in the file if not specified
-		if(!clsnum) {
+		// Estimate the number of nodes and clusters in the file if not specified
+		uint8_t  estimnds = 0;  // Estimation flag
+		if(!ndsnum) {
 			size_t  cmsbytes = -1;
-			if(!ndsnum) {
-				cmsbytes = file.size();
-				if(cmsbytes != size_t(-1))  // File length fetching failed
-					ndsnum = estimateCnlNodes(cmsbytes, membership);
+			cmsbytes = file.size();
+			if(cmsbytes != size_t(-1)) {  // File length fetching failed
+				ndsnum = estimateCnlNodes(cmsbytes, membership);
+				estimnds = 1;
+			} else if(clsnum) {
+				ndsnum = 2 * clsnum; // / membership;  // Note: use optimistic estimate instead of pessimistic (square / membership) to not overuse the memory
+				estimnds = 2;
 			}
+		}
+		if(!clsnum && ndsnum) {
 			clsnum = estimateClusters(ndsnum, membership);
 #if TRACE >= 2
 			fprintf(stderr, "mergeCollections(), %lu nodes (estimated: %u)"
-				", %lu estimated clusters\n", ndsnum, cmsbytes != size_t(-1), clsnum);
+				", %lu estimated clusters\n", ndsnum, estimnds, clsnum);
 #endif // TRACE
 		} else {
 #if TRACE >= 2
 			fprintf(stderr, "mergeCollections(), specified %lu clusters, %lu nodes\n"
 				, clsnum, ndsnum);
 #endif // TRACE
-			if(!ndsnum)
-				ndsnum = clsnum * clsnum / membership;  // The expected number of nodes
 		}
 
 		// Preallocate space for the clusters hashes
@@ -493,11 +497,11 @@ bool extractBase(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin, Id c
 
 		// Estimate the number of nodes in the file if not specified
 		if(!ndsnum) {
-			if(!clsnum) {
-				size_t  cmsbytes = file.size();
-				if(cmsbytes != size_t(-1))  // File length fetching failed
-					ndsnum = estimateCnlNodes(cmsbytes, membership);
-			} else ndsnum = clsnum * clsnum / membership;  // The expected number of nodes
+			size_t  cmsbytes = file.size();
+			if(cmsbytes != size_t(-1))  // File length fetching failed
+				ndsnum = estimateCnlNodes(cmsbytes, membership);
+			else if(clsnum)
+				ndsnum = 2 * clsnum; // / membership;  // Note: use optimistic estimate instead of pessimistic (square / membership) to not overuse the memory
 #if TRACE >= 2
 			fprintf(stderr, "extractBase(), estimated %lu nodes\n", ndsnum);
 #endif // TRACE
