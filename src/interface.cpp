@@ -8,12 +8,13 @@
 //! \email luart@ya.ru
 //! \date 2017-02-13
 
-#include "interface.h"
 #include <cstring>  // strlen
 #include <cmath>  // sqrt
 #include <cassert>
 #include <stdexcept>
 #include <limits>
+#include "coding.hpp"
+#include "interface.h"
 
 
 using std::invalid_argument;
@@ -22,31 +23,6 @@ using fs::exists;
 using fs::is_directory;
 using fs::directory_iterator;
 
-// Accessory types definitions -------------------------------------------------
-void AggHash::add(Id id) noexcept
-{
-	++m_size;
-	m_idsum += id;
-	m_id2sum += id * id;
-}
-
-void AggHash::clear() noexcept
-{
-	m_size = 0;
-	m_idsum = 0;
-	m_id2sum = 0;
-}
-
-size_t AggHash::hash() const
-{
-	return std::hash<string>()(string(reinterpret_cast<const char*>(this), sizeof *this));
-}
-
-//bool Cluster::operator<(const Cluster& cl) const noexcept
-//{
-//	return m_members.size() < cl.m_members.size() || (m_members.size() == cl.m_members.size()
-//		&& (m_sum < cl.m_sum || (m_sum == cl.m_sum && m_sum2 < cl.m_sum2)));
-//}
 
 // Accessory functions definitions ---------------------------------------------
 UniqIds loadNodes(NamedFileWrapper& file, float membership, Id cmin, Id cmax)
@@ -336,7 +312,7 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 #if TRACE >= 2
 		size_t  fclsnum = 0;  // The number of read clusters from the file
 #endif // TRACE
-		AggHash  agghash;  // Aggregation hash for the cluster nodes (ids)
+		daoc::AggHash<Id, Size>  agghash;  // Aggregation hash for the cluster nodes (ids)
 		do {
 			char *tok = strtok(line, mbdelim);  // const_cast<char*>(line.data())
 

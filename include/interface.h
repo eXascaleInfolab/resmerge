@@ -18,6 +18,7 @@
 
 
 using std::unordered_set;
+using namespace daoc;
 
 // Base types ------------------------------------------------------------------
 //! Node Id
@@ -51,43 +52,6 @@ constexpr char  PATHSEP =
 	'\\'
 #endif // _WIN32
 ;  // Path separator
-
-//! \brief Aggregation hash of ids
-class AggHash {
-	Size  m_size;  //!< Size of the container
-	Size  m_idsum;  //!<  Sum of the members
-	Size  m_id2sum;  //!< Sum of the squared members
-public:
-    //! \brief Default constructor
-	AggHash() noexcept
-	: m_size(0), m_idsum(0), m_id2sum(0)  {}
-
-    //! \brief Add id to the aggregation
-    //!
-    //! \param id Id  - id to be included into the hash
-    //! \return void
-	void add(Id id) noexcept;
-
-    //! \brief Clear/reset the aggregation
-    //!
-    //! \return void
-	void clear() noexcept;
-
-    //! \brief Number of the aggregated ids
-    //!
-    //! \return size_t  - number of the aggregated ids
-	size_t size() const noexcept  { return m_size; }
-
-//    //! \brief The hash is empty
-//    //!
-//    //! \return bool  - the hash is empty
-//	bool empty() const noexcept  { return !m_size; }
-
-    //! \brief Evaluate hash of the aggregation
-    //!
-    //! \return size_t  - resulting hash
-	size_t hash() const;
-};
 
 //! \brief Unordered container of NamedFileWrapper-s
 using NamedFileWrappers = vector<NamedFileWrapper>;
