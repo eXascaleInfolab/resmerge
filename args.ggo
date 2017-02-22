@@ -29,7 +29,12 @@ modeoption  "extract-base" e  "extract the node base from the clusterings instea
 
 #text "\n  clusterings  - clusterings specified by the listed given and all files in the given directories"
 
-args "--default-optional --unamed-opts=clusterings"   # Set opional opions, allow input files to be unnamed parameters
+args "--default-optional --unamed-opts=clusterings"   # Set optional options, allow input files to be unnamed parameters
+
+
+# = Changelog =
+# v1.1 - Sync/extract modes added
+# v1.0 - Initial Release
 
 # Basic structure, see https://www.gnu.org/software/gengetopt/gengetopt.html#Basic-Usage
 #     package "<packname>"
@@ -66,7 +71,3 @@ args "--default-optional --unamed-opts=clusterings"   # Set opional opions, allo
 #     defgroup "my grp2"
 #     defgroup "grp1" groupdesc="an option of this group is required" required
 #     groupoption "opta" a "string a" group="grp1" multiple
-
-# = Changelog =
-# v1.1 - Sync/extract modes added
-# v1.0 - Initial Release
