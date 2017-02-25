@@ -11,13 +11,10 @@
 #ifndef INTERFACE_H
 #define INTERFACE_H
 
-#include <unordered_set>
-
 #define INCLUDE_STL_FS
-#include "fileio.h"
+#include "fileio.hpp"
 
 
-using std::unordered_set;
 using namespace daoc;
 
 // Base types ------------------------------------------------------------------
@@ -25,9 +22,9 @@ using namespace daoc;
 using Id = uint32_t;
 //constexpr Id  ID_NONE = numeric_limits<Id>::max();
 
-//! Size type
+//! AccId type
 //! \note Larger than Id type with at least twice in magnitude
-using Size = uint64_t;
+using AccId = uint64_t;
 
 //! Hashes of the clusters
 using ClusterHashes = unordered_set<size_t>;
@@ -55,18 +52,6 @@ constexpr char  PATHSEP =
 
 //! \brief Unordered container of NamedFileWrapper-s
 using NamedFileWrappers = vector<NamedFileWrapper>;
-
-// Accessory functions ---------------------------------------------------------
-//! \brief Load node base (unique node ids) from the CNL file optionally
-//! 	filtering clusters by size
-//!
-//! \param file NamedFileWrapper&  - input collection of clusters in the CNL format
-//! \param membership=1.f float  - average membership of the node,
-//! 	> 0, typically ~= 1
-//! \param cmin=0 Id  - min allowed cluster size
-//! \param cmax=0 Id  - max allowed cluster size, 0 means any size
-//! \return UniqIds  - resulting node bae
-UniqIds loadNodes(NamedFileWrapper& file, float membership=1.f, Id cmin=0, Id cmax=0);
 
 // Interface functions ---------------------------------------------------------
 //! \brief Create output file if required

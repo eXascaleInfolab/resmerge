@@ -13,7 +13,6 @@
 #include <cassert>
 #include <stdexcept>
 #include <limits>
-#include "coding.hpp"
 #include "interface.h"
 
 
@@ -23,109 +22,6 @@ using fs::exists;
 using fs::is_directory;
 using fs::directory_iterator;
 
-
-// Accessory functions definitions ---------------------------------------------
-UniqIds loadNodes(NamedFileWrapper& file, float membership, Id cmin, Id cmax)
-{
-	UniqIds  nodebase;  // Node base;  Note: returned using NRVO optimization
-
-	if(!file)
-		return nodebase;
-
-	// Note: CNL [CSN] format only is supported
-	size_t  clsnum = 0;  // The number of clusters
-	size_t  ndsnum = 0;  // The number of nodes
-
-	// Note: strings defined out of the cycle to avoid reallocations
-	StringBuffer  line;  // Reading line
-	// Parse header and read the number of clusters if specified
-	parseCnlHeader(file, line, clsnum, ndsnum);
-
-	// Estimate the number of nodes in the file if not specified
-	if(!ndsnum) {
-		size_t  cmsbytes = file.size();
-		if(cmsbytes != size_t(-1))  // File length fetching failed
-			ndsnum = estimateCnlNodes(cmsbytes, membership);
-		else if(clsnum)
-			ndsnum = 2 * clsnum; // / membership;  // Note: use optimistic estimate instead of pessimistic (square / membership) to not overuse the memory
-#if TRACE >= 2
-		fprintf(stderr, "loadNodes(), estimated %lu nodes\n", ndsnum);
-#endif // TRACE
-	}
-#if TRACE >= 2
-	else fprintf(stderr, "loadNodes(), specified %lu nodes\n", ndsnum);
-#endif // TRACE
-
-	// Preallocate space for nodes
-	if(ndsnum)
-		nodebase.reserve(ndsnum);
-
-	// Load clusters
-	// ATTENTION: without '\n' delimiter the terminating '\n' is read as an item
-	constexpr char  mbdelim[] = " \t\n";  // Delimiter for the members
-	vector<Id>  cnds;  // Cluster nodes. Note: a dedicated container is required to filter clusters by size
-	cnds.reserve(sqrt(ndsnum));  // Note: typically cluster size does not increase the square root of the number of nodes
-#if TRACE >= 2
-	size_t  totmbs = 0;  // The number of read member nodes from the file including repetitions
-	size_t  fclsnum = 0;  // The number of read clusters from the file
-#endif // TRACE
-	do {
-		char *tok = strtok(line, mbdelim);  // const_cast<char*>(line.data())
-
-		// Skip comments
-		if(!tok || tok[0] == '#')
-			continue;
-		// Skip the cluster id if present
-		if(tok[strlen(tok) - 1] == '>') {
-			const char* cidstr = tok;
-			tok = strtok(nullptr, mbdelim);
-			// Skip empty clusters, which actually should not exist
-			if(!tok) {
-				fprintf(stderr, "WARNING loadNodes(), empty cluster"
-					" exists: '%s', skipped\n", cidstr);
-				continue;
-			}
-		}
-		do {
-			// Note: only node id is parsed, share part is skipped if exists,
-			// but potentially can be considered in NMI and F1 evaluation.
-			// In the latter case abs diff of shares instead of co occurrence
-			// counting should be performed.
-			Id  nid = strtoul(tok, nullptr, 10);
-#if VALIDATE >= 2
-			if(!nid && tok[0] != '0') {
-				fprintf(stderr, "WARNING loadNodes(), conversion error of '%s' into 0: %s\n"
-					, tok, strerror(errno));
-				continue;
-			}
-#endif // VALIDATE
-#if TRACE >= 2
-			++totmbs;  // Update the total number of read members
-#endif // TRACE
-			cnds.push_back(nid);
-		} while((tok = strtok(nullptr, mbdelim)));
-#if TRACE >= 2
-		++fclsnum;  // The number of valid read lines, i.e. clusters
-#endif // TRACE
-
-		// Filter read cluster by size
-		if(cnds.size() >= cmin && (!cmax || cnds.size() <= cmax))
-			nodebase.insert(cnds.begin(), cnds.end());
-		// Prepare outer vars for the next iteration
-		cnds.clear();
-	} while(line.readline(file));
-//	// Rehash the nodes decreasing the allocated space if required
-//	if(nodebase.size() <= nodebase.bucket_count() * nodebase.max_load_factor() / 3)
-//		nodebase.reserve(nodebase.size());
-#if TRACE >= 2
-	printf("loadNodes(). the loaded base has %lu nodes from the input %lu members and %lu clusters\n"
-		, nodebase.size(), totmbs, fclsnum);
-#elif TRACE >= 1
-	printf("The loaded nodebase: %lu\n", nodebase.size());
-#endif // TRACE
-
-	return nodebase;
-}
 
 // Interface functions definitions ---------------------------------------------
 NamedFileWrapper createFile(const string& outpname, bool rewrite)
@@ -233,7 +129,7 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 	// Note: the node base clusters are not filtered by size, because they might be loaded
 	// either from the ground-truth collection or from the dedicated node base. The filtering
 	// is performed only on the node base extraction
-	UniqIds  nodebase = loadNodes(fbase, membership);
+	auto  nodebase = loadNodes<Id, AccId>(fbase, membership);
 	const bool nosync = nodebase.empty();  // Do not sync the node base
 
 	// Write a stub header the actual values of clusters and nodes will be later,
@@ -255,9 +151,9 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 	// in the merged clusters, but it is much cheaper to do it on clusters merging
 	// than on reading the formed files. It will reduce the number of allocations on reading.
 #if TRACE >= 2
-	Size  totcls = 0;  // Total number of clusters read from all files
-	Size  totmbs = 0;  // Total number of members (nodes with repetitions) read from all files
-	Size  hashedmbs = 0;  // Total number of members (nodes with repetitions) in the hashed clusters from all files
+	AccId  totcls = 0;  // Total number of clusters read from all files
+	AccId  totmbs = 0;  // Total number of members (nodes with repetitions) read from all files
+	AccId  hashedmbs = 0;  // Total number of members (nodes with repetitions) in the hashed clusters from all files
 #endif // TRACE
 	// ATTENTION: without '\n' delimiter the terminating '\n' is read as an item
 	constexpr char  mbdelim[] = " \t\n";  // Delimiter for the members
@@ -312,7 +208,7 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 #if TRACE >= 2
 		size_t  fclsnum = 0;  // The number of read clusters from the file
 #endif // TRACE
-		daoc::AggHash<Id, Size>  agghash;  // Aggregation hash for the cluster nodes (ids)
+		daoc::AggHash<Id, AccId>  agghash;  // Aggregation hash for the cluster nodes (ids)
 		do {
 			char *tok = strtok(line, mbdelim);  // const_cast<char*>(line.data())
 
@@ -455,8 +351,8 @@ bool extractBase(NamedFileWrapper& fout, NamedFileWrappers& files, Id cmin, Id c
 
 	UniqIds  nodebase;  // Unique node ids
 #if TRACE >= 2
-	Size  totcls = 0;  // Total number of clusters read from all files
-	Size  totmbs = 0;  // Total number of members (nodes with repetitions) read from all files
+	AccId  totcls = 0;  // Total number of clusters read from all files
+	AccId  totmbs = 0;  // Total number of members (nodes with repetitions) read from all files
 #endif // TRACE
 	// ATTENTION: without '\n' delimiter the terminating '\n' is read as an item
 	constexpr char  mbdelim[] = " \t\n";  // Delimiter for the members
