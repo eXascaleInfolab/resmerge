@@ -29,8 +29,8 @@ NamedFileWrapper createFile(const string& outpname, bool rewrite)
 	NamedFileWrapper  fout;  // Use NRVO optimization
 	// Check whether the output already exists
 	if(exists(outpname)) {
-		fprintf(stderr, "WARNING createFile(), the output file '%s' already exists, rewrite it: %u\n"
-			, outpname.c_str(), rewrite);
+		fprintf(stderr, "WARNING createFile(), the output file '%s' already exists, rewrite it: %s\n"
+			, outpname.c_str(), to_cstr(rewrite));
 		if(!rewrite)
 			return fout;
 	} else {
