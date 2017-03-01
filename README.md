@@ -3,6 +3,8 @@
 Merges multiple cluster resolutions / hierarchy levels into the single collection, i.e. flattens the input hierarchy / resolutions specified by the files and / or directories. Only unique clusters independent of the nodes order are saved into the output file with optional filtering by the clusters size and node base synchronization.  
 `resmerge` is one of the utilities designed for the [PyCaBeM](https://github.com/eXascaleInfolab/PyCABeM) clustering benchmark.
 
+Author (c)  Artem Lutov <artem@exascale.info>
+
 ## Content
 - [Deployment](#deployment)
 	- [Dependencies](#dependencies)
