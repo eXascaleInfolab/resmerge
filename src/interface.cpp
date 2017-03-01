@@ -30,7 +30,7 @@ NamedFileWrapper createFile(const string& outpname, bool rewrite)
 	// Check whether the output already exists
 	if(exists(outpname)) {
 		fprintf(stderr, "WARNING createFile(), the output file '%s' already exists, rewrite it: %s\n"
-			, outpname.c_str(), to_cstr(rewrite));
+			, outpname.c_str(), toYesNo(rewrite));
 		if(!rewrite)
 			return fout;
 	} else {
