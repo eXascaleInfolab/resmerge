@@ -265,10 +265,11 @@ public:
 
     //! \brief Read line from the file and store including the terminating '\n' symbol
     //! \attention The read string contains the trailing '\n' if exist in the file
+    //! \note The buffer might contain [part of] the read line on reading error
     //!
     //! \param input FILE*  - processing file
-    //! \return bool  - whether the following line available and the current one
-    //! 	is read without any errors
+    //! \return bool  - whether the current line is read without any errors or
+    //! the all lines already read (and the current one is empty)
 	bool readline(FILE* input);
 };
 
@@ -302,10 +303,11 @@ void parseCnlHeader(NamedFileWrapper& fcls, StringBuffer& line, size_t& clsnum, 
 //! node ids if not nullptr
 //! \param cmin=0 size_t  - min allowed cluster size
 //! \param cmax=0 size_t  - max allowed cluster size, 0 means any size
+//! \param verbose=true bool  - print the number of loaded nodes to the stdout
 //! \return bool  - the collection is loaded successfully
 template <typename Id, typename AccId>
 unordered_set<Id> loadNodes(NamedFileWrapper& file, float membership=1
-	, AggHash<Id, AccId>* ahash=nullptr, size_t cmin=0, size_t cmax=0);
+	, AggHash<Id, AccId>* ahash=nullptr, size_t cmin=0, size_t cmax=0, bool verbose=true);
 
 //! \brief Estimate the number of nodes from the CNL file size
 //!
@@ -332,7 +334,7 @@ constexpr const char* toYesNo(bool val) noexcept  { return val ? "yes" : "no"; }
 // File I/O templates definition -----------------------------------------------
 template <typename Id, typename AccId>
 unordered_set<Id> loadNodes(NamedFileWrapper& file, float membership
-	, AggHash<Id, AccId>* ahash, size_t cmin, size_t cmax)
+	, AggHash<Id, AccId>* ahash, size_t cmin, size_t cmax, bool verbose)
 {
 	unordered_set<Id>  nodebase;  // Node base;  Note: returned using NRVO optimization
 
@@ -346,6 +348,7 @@ unordered_set<Id> loadNodes(NamedFileWrapper& file, float membership
 	// Note: strings defined out of the cycle to avoid reallocations
 	StringBuffer  line;  // Reading line
 	// Parse header and read the number of clusters if specified
+	// Note: line includes terminating '\n'
 	parseCnlHeader(file, line, clsnum, ndsnum);
 
 	// Estimate the number of nodes in the file if not specified
@@ -377,6 +380,10 @@ unordered_set<Id> loadNodes(NamedFileWrapper& file, float membership
 	size_t  fclsnum = 0;  // The number of read clusters from the file
 #endif // TRACE
 	do {
+#if TRACE >= 3
+		// Note: line includes terminating '\n'
+		fprintf(stderr, "%lu> %s", fclsnum, static_cast<const char*>(line));
+#endif // TRACE
 		char *tok = strtok(line, mbdelim);  // const_cast<char*>(line.data())
 
 		// Skip comments
@@ -425,11 +432,12 @@ unordered_set<Id> loadNodes(NamedFileWrapper& file, float membership
 //	if(nodebase.size() <= nodebase.bucket_count() * nodebase.max_load_factor() / 3)
 //		nodebase.reserve(nodebase.size());
 #if TRACE >= 2
-	printf("loadNodes(). the loaded base has %lu nodes from the input %lu members and %lu clusters\n"
+	printf("loadNodes(), the loaded base has %lu nodes from the input %lu members of %lu clusters\n"
 		, nodebase.size(), totmbs, fclsnum);
-#elif TRACE >= 1
-	printf("The loaded nodebase: %lu\n", nodebase.size());
-#endif // TRACE
+#else
+	if(verbose)
+		printf("loadNodes(), nodebase nodes loaded: %lu\n", nodebase.size());
+#endif // TRACE 2
 
 	// Evaluate nodes hash if required
 	if(ahash && nodebase.size()) {
