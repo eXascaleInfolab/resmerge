@@ -15,16 +15,16 @@ Author (c)  Artem Lutov <artem@exascale.info>
 # Deployment
 
 ## Requirements
-There no any requirements for the execution or compilation except the *standard C++ library*, which is typically available by default.  
+There no any requirements for the execution or compilation except the *standard C++ library*.  
 However, to extend the input options and automatically regenerate the input parsing,
 [*gengetopt*](https://www.gnu.org/software/gengetopt) application should be installed: `$ sudo apt-get install gengetopt`.  
 
 The **prebuilt executable** requires `stdlib++6` from *Ubuntu 16.04 x64*, on another platforms you might need to *compile the native executable*.  
 To install *libstdc++6* (stdc++fs) on Linux Ubuntu 16.04 / latest Debian x64, execute: `$ sudo apt-get install libstdc++6`. On the earlier versions of Ubuntu you might need to use the *toolchain* repository:
 ```
-sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-sudo apt-get update
-sudo apt-get install -y libstdc++6
+$ sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+$ sudo apt-get update
+$ sudo apt-get install -y libstdc++6
 ```
 Or manually fetch `libstdc++6` from the Ubuntu 16.04 repository and install it via `dpkg`:
 ```
