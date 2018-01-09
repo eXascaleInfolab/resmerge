@@ -37,9 +37,9 @@ resmerge 1.1
 Merge multiple clusterings (resolution/hierarchy levels) with optional
 filtering of clusters by size and nodes filtering by base.
 
-Usage: resmerge [OPTIONS] clusterings
+Usage: resmerge [OPTIONS] clusterings...
 
-  clusterings  - clusterings specified by the given files and directories
+  clusterings...  - clusterings specified by the given files and directories
 (non-recursive traversing)
 
   -h, --help              Print help and exit

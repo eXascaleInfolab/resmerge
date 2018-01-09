@@ -25,9 +25,9 @@
 
 #include "cmdline.h"
 
-const char *gengetopt_args_info_purpose = "Merge multiple clusterings (resolution/hierarchy levels) with optional\nfiltering of clusters by size and nodes filtering by base.";
+const char *gengetopt_args_info_purpose = "Merge multiple clusterings (resolution/hierarchy levels) with optional\nfiltering of clusters by size and nodes filtering by the specified base.";
 
-const char *gengetopt_args_info_usage = "Usage: resmerge [OPTIONS] clusterings\n\n  clusterings  - clusterings specified by the given files and directories\n(non-recursive traversing)";
+const char *gengetopt_args_info_usage = "Usage: resmerge [OPTIONS] clusterings...\n\n  clusterings...  - clusterings specified by the given files and directories\n(non-recursive traversing)";
 
 const char *gengetopt_args_info_versiontext = "";
 
@@ -36,7 +36,7 @@ const char *gengetopt_args_info_description = "";
 const char *gengetopt_args_info_help[] = {
   "  -h, --help              Print help and exit",
   "  -V, --version           Print version and exit",
-  "  -o, --output=STRING     output file name. If a single directory <dirname> is\n                            specified then the default output file name is\n                            <dirname>.cnl  (default=`clusters.cnl')",
+  "  -o, --output=STRING     output file name. If a single directory <dirname> is\n                            specified then the default output file name is\n                            <dirname>.cnl.\n                            NOTE: the number of nodes is written to the output\n                            file only if the node base synchronization is\n                            applied, otherwise 0 is set\n                            (default=`clusters.cnl')",
   "  -r, --rewrite           rewrite already existing resulting file or skip the\n                            processing  (default=off)",
   "  -b, --btm-size=LONG     bottom margin of the cluster size to process\n                            (default=`0')",
   "  -t, --top-size=LONG     top margin of the cluster size to process\n                            (default=`0')",
@@ -572,7 +572,8 @@ cmdline_parser_internal (
           cmdline_parser_free (&local_args_info);
           exit (EXIT_SUCCESS);
 
-        case 'o':	/* output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl.  */
+        case 'o':	/* output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl.
+        NOTE: the number of nodes is written to the output file only if the node base synchronization is applied, otherwise 0 is set.  */
         
         
           if (update_arg( (void *)&(args_info->output_arg), 

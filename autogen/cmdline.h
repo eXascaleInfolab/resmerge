@@ -39,9 +39,12 @@ struct gengetopt_args_info
 {
   const char *help_help; /**< @brief Print help and exit help description.  */
   const char *version_help; /**< @brief Print version and exit help description.  */
-  char * output_arg;	/**< @brief output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl (default='clusters.cnl').  */
-  char * output_orig;	/**< @brief output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl original value given at command line.  */
-  const char *output_help; /**< @brief output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl help description.  */
+  char * output_arg;	/**< @brief output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl.
+  NOTE: the number of nodes is written to the output file only if the node base synchronization is applied, otherwise 0 is set (default='clusters.cnl').  */
+  char * output_orig;	/**< @brief output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl.
+  NOTE: the number of nodes is written to the output file only if the node base synchronization is applied, otherwise 0 is set original value given at command line.  */
+  const char *output_help; /**< @brief output file name. If a single directory <dirname> is specified then the default output file name is  <dirname>.cnl.
+  NOTE: the number of nodes is written to the output file only if the node base synchronization is applied, otherwise 0 is set help description.  */
   int rewrite_flag;	/**< @brief rewrite already existing resulting file or skip the processing (default=off).  */
   const char *rewrite_help; /**< @brief rewrite already existing resulting file or skip the processing help description.  */
   long btm_size_arg;	/**< @brief bottom margin of the cluster size to process (default='0').  */
