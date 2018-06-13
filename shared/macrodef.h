@@ -1,5 +1,6 @@
-//! \brief The Dao of Clustering library - Robust & Fine-grained Deterministic Clustering for Large Networks
-//! 	Global macro definitions.
+//! \brief Global macro definitions.
+//! The Dao (Deterministic Agglomerative Overlapping) of Clustering library:
+//! Robust & Fine-grained Deterministic Clustering for Large Networks.
 //!
 //! \license Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0.html
 //! > 	Simple explanation: https://tldrlegal.com/license/apache-license-2.0-(apache-2.0)
@@ -27,6 +28,9 @@
 //
 //	- FTRACE_GLOBAL  - use global ftrace file for the whole project, or "shared/" headers
 //		define it locally
+//
+//	- UTEST  - build [also] unit tests, requires installation and linking of the unit test library.
+//
 // NOTE: undefined maro definition is interpreted as having value 0
 
 #ifndef TRACE
@@ -51,12 +55,14 @@
 
 // SWIG related macro definitions
 // Swig 3.0.12 does not understand some structures, workarounds are applied
+// Note: defined only for SWIG interfaces
 #ifdef SWIG
 	// Just skip the static assert
     #define static_assert(a, b)
 #endif // SWIG
 
 // Note: SWIG_VERSION is not defined for SWIGJAVA and SWIGCSHARP
+// Note: defined both for the SWIG interfaces and implementation
 #if defined(SWIG_VERSION) || defined(SWIGJAVA) || defined(SWIGCSHARP)
 	// Defined automatically when any SWIG processing is performed
 	// (either the included as SWIG interface or implementation)
@@ -67,5 +73,6 @@
 #if defined(SWIGCSHARP) || defined(SWIGD) || defined(SWIGJAVA)
 	#define SWIG_OVERLOADS
 #endif // OVERLOADS
+
 
 #endif // MACRODEF_H
