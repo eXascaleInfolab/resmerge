@@ -25,7 +25,7 @@
 
 #include "cmdline.h"
 
-const char *gengetopt_args_info_purpose = "Merge multiple clusterings (resolution/hierarchy levels) with optional\nfiltering of clusters by size and nodes filtering by the specified base.";
+const char *gengetopt_args_info_purpose = "Merge multiple clusterings (resolution/hierarchy levels) outputting only the\nunique clusters with the optional their filtering by the size and nodes\nfiltering by the specified base.";
 
 const char *gengetopt_args_info_usage = "Usage: resmerge [OPTIONS] clusterings...\n\n  clusterings...  - clusterings specified by the given files and directories\n(non-recursive traversing)";
 

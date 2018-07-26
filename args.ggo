@@ -1,10 +1,11 @@
 # Configuration file for the automatic generation of the input options parsing
 
 package "resmerge"
-version "1.1"
+version "1.2"
 
-purpose "Merge multiple clusterings (resolution/hierarchy levels) with optional\
- filtering of clusters by size and nodes filtering by the specified base."
+purpose "Merge multiple clusterings (resolution/hierarchy levels) outputting only\
+ the unique clusters with the optional their filtering by the size and nodes\
+ filtering by the specified base."
 
 
 usage "resmerge [OPTIONS] clusterings...
@@ -39,6 +40,7 @@ args "--default-optional --unamed-opts=clusterings"   # Set optional options, al
 
 
 # = Changelog =
+# v1.2 - Clusters filtration refined considering possible hash collisions, informative reporting added
 # v1.1 - Sync/extract modes added
 # v1.0 - Initial Release
 

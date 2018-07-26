@@ -9,15 +9,19 @@
 //! \date 2017-02-13
 
 #include <cstring>  // strlen
+#include <unordered_map> // strlen
 #include <cmath>  // sqrt
 #include <cassert>
 #include <stdexcept>
 #include <limits>
+#include <algorithm>
 #include "interface.h"
 
 
+using std::unordered_map;
 using std::invalid_argument;
 using std::numeric_limits;
+using std::find;
 using fs::exists;
 using fs::is_directory;
 using fs::directory_iterator;
@@ -146,7 +150,12 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 		fputs(header.c_str(), fout);
 	}
 
-	ClusterHashes  chashes;  // Hashes of the processed clusters
+	// Hashes of the clusters
+	//using ClusterHashes = unordered_set<size_t>;
+	using ClusterHash = daoc::AggHash<>;
+	using ClusterHashes = vector<ClusterHash>;  // The same size_t (ClusterHash::hash) can be yielded for distinct ClusterHash
+	using ClustersHashes = unordered_map<ClusterHash::IdT, ClusterHashes>;
+	ClustersHashes  chashes;  // Hashes of the processed clusters
 	// Note: it is not mandatory to evaluate and write the number of unique nodes
 	// in the merged clusters, but it is much cheaper to do it on clusters merging
 	// than on reading the formed files. It will reduce the number of allocations on reading.
@@ -161,6 +170,7 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 	StringBuffer  line;  // Reading line
 	string  clstr;  // Writing cluster string
 	vector<Id>  cnds;  // Cluster nodes. Note: a dedicated container is required to filter clusters by size
+	Id  cfltnum = 0;  // The number of filtered out clusters
 	for(auto& file: files) {
 		// Note: CNL [CSN] format only is supported
 		size_t  clsnum = 0;  // The number of clusters
@@ -267,6 +277,7 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 				assert(!agghash.size() && clstr.empty()
 					&& "mergeCollections(), asynchronous internal containers");
 #endif // VALIDATE
+				++cfltnum;
 				continue;
 			}
 			if(cnds.size() >= cmin && (!cmax || cnds.size() <= cmax)) {
@@ -274,7 +285,11 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 				if(!nosync)
 					nodebase.insert(cnds.begin(), cnds.end());
 				// Save clstr to the output file if such hash has not been processed yet
-				if(chashes.insert(agghash.hash()).second) {
+				const auto ch = agghash.hash();
+				const auto ich = chashes.find(ch);
+				if(ich == chashes.end()
+				|| std::find(ich->second.begin(), ich->second.end(), agghash) == ich->second.end()) {
+					chashes[ch].push_back(agghash);
 #if TRACE >= 2
 					hashedmbs += agghash.size();
 #endif // TRACE
@@ -286,8 +301,8 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 						perror("ERROR mergeCollections(), merged clusters output failed");
 						return false;
 					}
-				}
-			}
+				} else ++cfltnum;
+			} else ++cfltnum;
 			// Prepare outer vars for the next iteration
 			cnds.clear();
 			agghash.clear();  // Clear the hash
@@ -312,10 +327,11 @@ bool mergeCollections(NamedFileWrapper& fout, NamedFileWrappers& files
 		+ "', the stub header has not been replaced").c_str());
 #if TRACE >= 2
 	fprintf(stderr, "mergeCollections(),  merged %lu clusters, %lu members into"
-		" %lu clusters, %lu members. Resulting rations: %G clusters, %G members\n"
-		, totcls, totmbs, chashes.size(), hashedmbs
+		" %lu clusters, %lu members, %u clusters filtered out. Resulting rations: %G clusters, %G members\n"
+		, totcls, totmbs, chashes.size(), hashedmbs, cfltnum
 		, float(chashes.size()) / totcls, float(hashedmbs) / totmbs);
 #endif // TRACE
+	printf("%u clusters filtered, remained: %lu\n", cfltnum, chashes.size());
 
 	return true;
 }

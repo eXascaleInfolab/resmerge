@@ -26,9 +26,6 @@ using Id = uint32_t;
 //! \note Larger than Id type with at least twice in magnitude
 using AccId = uint64_t;
 
-//! Hashes of the clusters
-using ClusterHashes = unordered_set<size_t>;
-
 //! Unique ids
 using UniqIds = unordered_set<Id>;
 
