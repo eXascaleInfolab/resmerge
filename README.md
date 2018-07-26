@@ -1,6 +1,7 @@
 # resmerge - Resolution Level Clusterings Merger with Filtering
 
-Merges multiple cluster resolutions / hierarchy levels into the single collection, i.e. flattens the input hierarchy / resolutions specified by the files and / or directories. Only unique clusters independent of the nodes order are saved into the output file with optional filtering by the clusters size and node base synchronization.  
+*Merges multiple clustering resolutions / hierarchy levels into the single flat collection*, i.e. flattens the input hierarchy / resolutions specified by the files and / or directories. Also, can be used to *clean up a single clustering* (collection of clusters) deduplicating and optionally filtering out clusters and nodes by the specified criteria.  
+Only the unique clusters independent of the nodes order are saved into the output file with optional filtering by the clusters size and node base synchronization. The order of nodes of in the input clusters is retained. The execution is extremely fast, O(N).  
 `resmerge` is one of the utilities designed for the [PyCaBeM](https://github.com/eXascaleInfolab/PyCABeM) clustering benchmark.
 
 Author (c)  Artem Lutov <artem@exascale.info>
@@ -32,10 +33,11 @@ Then `g++-5` should be installed and `Makefile` might need to be edited replacin
 Execution Options:
 ```
 $ ./resmerge -h
-resmerge 1.1
+resmerge 1.2
 
-Merge multiple clusterings (resolution/hierarchy levels) with optional
-filtering of clusters by size and nodes filtering by base.
+Merge multiple clusterings (resolution/hierarchy levels) outputting only the
+unique clusters with the optional their filtering by the size and nodes
+filtering by the specified base.
 
 Usage: resmerge [OPTIONS] clusterings...
 
@@ -46,7 +48,11 @@ Usage: resmerge [OPTIONS] clusterings...
   -V, --version           Print version and exit
   -o, --output=STRING     output file name. If a single directory <dirname> is
                             specified then the default output file name is
-                            <dirname>.cnl  (default=`clusters.cnl')
+                            <dirname>.cnl.
+                            NOTE: the number of nodes is written to the output
+                            file only if the node base synchronization is
+                            applied, otherwise 0 is set
+                            (default=`clusters.cnl')
   -r, --rewrite           rewrite already existing resulting file or skip the
                             processing  (default=off)
   -b, --btm-size=LONG     bottom margin of the cluster size to process
@@ -70,6 +76,10 @@ Usage: resmerge [OPTIONS] clusterings...
 Merge clusterings (resolution levels) from the `<dirname>` to `<dirname>.cnl`:
 ```
 $ ./resmerge  /opt/tests/tmp/resolutions
+```
+Deduplicate a single clustering:
+```
+$ ./resmerge communs/com-dblp.all.cmty.txt -o communs/com-dblp.all.cmty.dedub.cnl
 ```
 Extract node base to `<filename>_base.cnl`:
 ```
