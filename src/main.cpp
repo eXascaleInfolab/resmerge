@@ -16,12 +16,23 @@
 
 using fs::is_directory;
 
+//! \brief Arguments parser
+struct ArgParser: gengetopt_args_info {
+	ArgParser(int argc, char **argv) {
+		auto  err = cmdline_parser(argc, argv, this);
+		if(err)
+			throw std::invalid_argument("Arguments parsing failed" + std::to_string(err));
+	}
+
+	~ArgParser() {
+		cmdline_parser_free(this);
+	}
+};
+
+
 int main(int argc, char **argv)
 {
-	gengetopt_args_info  args_info;
-	auto  err = cmdline_parser(argc, argv, &args_info);
-	if(err)
-		return err;
+	ArgParser  args_info(argc, argv);
 
 	if(!args_info.inputs_num) {
 		fputs("ERROR, input clusterings are required\n", stderr);
